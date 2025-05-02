@@ -1,0 +1,58 @@
+{
+	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+	"files": {
+		"maxSize": 20971520,
+		"ignore": []
+	},
+	"formatter": {
+		"indentStyle": "tab",
+		"formatWithErrors": true,
+		"lineWidth": 85
+	},
+	"javascript": {
+		"globals": ["React"],
+		"formatter": {
+			"semicolons": "asNeeded"
+		}
+	},
+	"css": {
+		"parser": {
+			"cssModules": true
+		}
+	},
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true,
+		"defaultBranch": "main"
+	},
+	"linter": {
+		"rules": {
+			"recommended": true,
+			"a11y": {
+				"all": false,
+				"noAccessKey": "error",
+				"noAriaHiddenOnFocusable": "error",
+				"noAriaUnsupportedElements": "error"
+			},
+			"complexity": {
+				"useArrowFunction": "off"
+			},
+			"correctness": {
+				"noUnusedImports": "error"
+			},
+			"performance": {
+				"noAccumulatingSpread": "off",
+				"noDelete": "error"
+			},
+			"security": {
+				"noDangerouslySetInnerHtml": "off"
+			},
+			"style": {
+				"noDefaultExport": "off",
+				"noNonNullAssertion": "off"
+			},
+			"suspicious": {}
+		}
+	}
+}
