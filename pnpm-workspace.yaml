@@ -1,3 +1,5 @@
 packages:
-- "insane"
+  - insane
 
+ignoredBuiltDependencies:
+  - esbuild
