@@ -1,0 +1,14 @@
+{
+	"name": "insane",
+	"version": "1.0.0",
+	"main": "index.js",
+	"license": "MIT",
+	"packageManager": "pnpm@10.10.0",
+	"devDependencies": {
+		"vite": "^6.3.4",
+		"vitest": "^3.1.2"
+	},
+	"dependencies": {
+		"inflection": "^3.0.2"
+	}
+}
