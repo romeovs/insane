@@ -2,5 +2,8 @@
 	"name": "insane",
 	"version": "0.0.1",
 	"license": "MIT",
-	"packageManager": "pnpm@10.9.0"
+	"packageManager": "pnpm@10.9.0",
+	"dependencies": {
+		"@biomejs/biome": "^1.9.4"
+	}
 }
