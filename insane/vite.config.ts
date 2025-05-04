@@ -10,6 +10,7 @@ export default defineConfig({
 		rollupOptions: {
 			input: {
 				tool: path.resolve(__dirname, "tool"),
+				build: path.resolve(__dirname, "build"),
 				config: path.resolve(__dirname, "config"),
 				runtime: path.resolve(__dirname, "runtime"),
 			},
