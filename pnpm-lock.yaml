@@ -24,6 +24,9 @@ importers:
       chokidar:
         specifier: ^4.0.3
         version: 4.0.3
+      rollup:
+        specifier: ^4.40.1
+        version: 4.40.1
       vite:
         specifier: ^6.3.4
         version: 6.3.4(@types/node@22.15.3)
