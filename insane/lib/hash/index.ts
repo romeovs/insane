@@ -13,7 +13,6 @@ function get(): ReturnType<typeof xxhash> {
  * Create base-32 encoded sha-256 digest from the source string.
  */
 export async function hash(source: string): Promise<string> {
-	const { h64 } = await get()
-	const digest = h64(source)
-	return digest.toString(32).toUpperCase()
+	const { h64ToString } = await get()
+	return h64ToString(source).toUpperCase()
 }
