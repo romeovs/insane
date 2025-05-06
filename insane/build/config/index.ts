@@ -1,4 +1,4 @@
-import { concatAll, map } from "rxjs"
+import { map, switchAll } from "rxjs"
 import { find as findFile, watch as watchFiles } from "./finder"
 import { read as readConfig, watch as watchConfig } from "./read"
 
@@ -17,5 +17,5 @@ export async function read(options: ConfigOptions) {
 export function watch(options: ConfigOptions) {
 	return watchFiles(options)
 		.pipe(map((configFile) => watchConfig({ configFile })))
-		.pipe(concatAll())
+		.pipe(switchAll())
 }

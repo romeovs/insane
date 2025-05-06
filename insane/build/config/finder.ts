@@ -1,8 +1,7 @@
 import { promises as fs } from "node:fs"
 
-import { type Observable, concatMap, filter, fromEventPattern } from "rxjs"
-
-import chokidar from "chokidar"
+import { type Observable, concatMap, filter } from "rxjs"
+import { watch as watchFiles } from "~/build/watch"
 
 export type FinderOptions = {
 	candidates: string[]
@@ -24,21 +23,7 @@ export async function find(options: FinderOptions) {
 export function watch(options: FinderOptions): Observable<string> {
 	const { candidates } = options
 
-	const watcher = chokidar.watch(candidates, {
-		ignored: ["**/.git", "**/node_modules"],
-		persistent: true,
-	})
-
-	return fromEventPattern(
-		function add(handler) {
-			watcher.on("all", handler)
-		},
-		function remove(handler) {
-			watcher.off("all", handler)
-			watcher.close()
-		},
-		(_, pathname: string) => pathname,
-	)
+	return watchFiles({ include: candidates })
 		.pipe(concatMap(() => find(options)))
 		.pipe(filter(Boolean))
 }

@@ -45,6 +45,7 @@ export function watch(options: ConfigOptions): Observable<ConfigWithHash> {
 					},
 					function remove(handler) {
 						watcher.off("event", handler)
+						watcher.close()
 					},
 				),
 			),
