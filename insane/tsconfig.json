@@ -17,7 +17,8 @@
 		"jsx": "preserve",
 		"incremental": true,
 		"paths": {
-			"~/*": ["./*"]
+			"~/*": ["./*"],
+			"insane/config": ["./dist/config/index.mjs"]
 		}
 	},
 	"include": ["**/*.ts", "**/*.tsx"],

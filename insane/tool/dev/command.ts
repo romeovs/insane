@@ -1,7 +1,6 @@
 import { defineCommand } from "citty"
 
 import { watch } from "~/build/config"
-import { debounce } from "~/build/debounce"
 
 export default defineCommand({
 	meta: {
@@ -27,11 +26,8 @@ export default defineCommand({
 					"insane.config.jsx",
 				]
 
-		const controller = new AbortController()
-		const signal = controller.signal
-
-		for await (const config of debounce(watch({ candidates, signal }), 200)) {
-			console.log(config)
-		}
+		watch({ candidates }).subscribe((config) => {
+			console.log("CONFIG", config)
+		})
 	},
 })

@@ -1,6 +1,15 @@
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 
+import {
+	type Observable,
+	concatMap,
+	distinct,
+	filter,
+	from,
+	fromEventPattern,
+} from "rxjs"
+
 import glob from "fast-glob"
 import type { RollupOutput, RollupWatcher, RollupWatcherEvent } from "rollup"
 import { build as vite } from "vite"
@@ -10,13 +19,12 @@ import type { InsaneConfig } from "~/lib/config"
 import { dir } from "~/lib/constants"
 import { hash } from "~/lib/hash"
 
-const tmpDir = path.join(dir, "tmp")
+const outDir = path.join(dir, "tmp")
 
 type ConfigWithHash = InsaneConfig & { hash: string }
 
 type ConfigOptions = {
 	configFile: string
-	signal: AbortSignal
 }
 
 export async function read(options: ConfigOptions) {
@@ -25,31 +33,25 @@ export async function read(options: ConfigOptions) {
 	return readOutput()
 }
 
-export async function* watch(options: ConfigOptions) {
-	const { configFile, signal } = options
-	const watcher = await makeVite(configFile, true)
+export function watch(options: ConfigOptions): Observable<ConfigWithHash> {
+	const { configFile } = options
 
-	signal?.addEventListener("abort", () => watcher.close())
-
-	let last = null
-
-	for (;;) {
-		try {
-			await wait(watcher)
-			const config = await readOutput()
-
-			if (last === null || last !== config.hash) {
-				// deduplicate the config by hash
-				last = config.hash
-				yield config
-			}
-		} catch (err) {
-			if (err === undefined) {
-				return
-			}
-			throw err
-		}
-	}
+	return from(makeVite(configFile, true))
+		.pipe(
+			concatMap((watcher) =>
+				fromEventPattern<RollupWatcherEvent>(
+					function add(handler) {
+						watcher.on("event", handler)
+					},
+					function remove(handler) {
+						watcher.off("event", handler)
+					},
+				),
+			),
+		)
+		.pipe(filter((evt) => evt.code === "END"))
+		.pipe(concatMap(readOutput))
+		.pipe(distinct((cfg) => cfg.hash))
 }
 
 // read the built file
@@ -69,7 +71,7 @@ async function readOutput(): Promise<ConfigWithHash> {
 
 // find the built config file
 async function findOutput() {
-	const files = await glob(`${tmpDir}/entry.*.mjs`)
+	const files = await glob(`${outDir}/entry.*.mjs`)
 	if (files.length === 0) {
 		throw new Error("Could not build config")
 	}
@@ -78,23 +80,6 @@ async function findOutput() {
 	}
 
 	return files[0]!
-}
-
-async function wait(watcher: RollupWatcher) {
-	await new Promise(function (resolve, reject) {
-		function handler(evt: RollupWatcherEvent) {
-			if (evt.code !== "END") {
-				return
-			}
-
-			watcher.off("event", handler)
-			watcher.off("close", reject)
-
-			resolve(null)
-		}
-		watcher.on("event", handler)
-		watcher.on("close", reject)
-	})
 }
 
 async function makeVite(configFile: string, watch: true): Promise<RollupWatcher>
@@ -108,7 +93,7 @@ async function makeVite(
 		logLevel: "silent",
 		plugins: [tspaths()],
 		build: {
-			outDir: tmpDir,
+			outDir,
 			emptyOutDir: true,
 			watch: watch ? {} : null,
 			target: "esnext",
