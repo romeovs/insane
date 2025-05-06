@@ -5,6 +5,7 @@
 	"license": "MIT",
 	"packageManager": "pnpm@10.10.0",
 	"devDependencies": {
+		"@types/micromatch": "^4.0.9",
 		"@types/node": "^22.15.3",
 		"chokidar": "^4.0.3",
 		"fast-glob": "^3.3.3",
@@ -20,6 +21,7 @@
 		"citty": "^0.1.6",
 		"graphql": "^16.11.0",
 		"inflection": "^3.0.2",
+		"micromatch": "^4.0.8",
 		"typescript": "^5.8.3",
 		"xxhash-wasm": "^1.1.0"
 	}
