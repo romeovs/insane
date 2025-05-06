@@ -1,6 +1,7 @@
 import { defineCommand } from "citty"
 
-import { read } from "~/build/config"
+import { read as readConfig } from "~/build/config"
+import { load as loadDocuments } from "~/build/documents"
 
 export default defineCommand({
 	meta: {
@@ -29,7 +30,13 @@ export default defineCommand({
 		const controller = new AbortController()
 		const signal = controller.signal
 
-		const config = await read({ candidates, signal })
+		const config = await readConfig({ candidates, signal })
+		const documents = await loadDocuments({
+			include: config.include ?? [],
+			exclude: config.exclude ?? [],
+		})
+
 		console.log(config)
+		console.log(documents)
 	},
 })
