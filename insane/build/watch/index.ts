@@ -6,7 +6,7 @@ import { dir } from "~/lib/constants"
 import { type Observable, filter, fromEventPattern } from "rxjs"
 
 type WatchOptions = {
-	include: string[]
+	include?: string[]
 	exclude?: string[]
 }
 
@@ -30,7 +30,7 @@ export function watch(options: WatchOptions): Observable<string> {
 
 function matches(filename: string, options: WatchOptions) {
 	return (
-		micromatch.isMatch(filename, options.include) &&
+		micromatch.isMatch(filename, options.include ?? ["**/*"]) &&
 		!micromatch.isMatch(filename, options.exclude ?? [])
 	)
 }

@@ -1,6 +1,9 @@
 import { defineCommand } from "citty"
 
-import { watch } from "~/build/config"
+import { map, switchAll, throttleTime } from "rxjs"
+
+import { watch as watchConfig } from "~/build/config"
+import { watch as watchSources } from "~/build/documents"
 
 export default defineCommand({
 	meta: {
@@ -26,8 +29,16 @@ export default defineCommand({
 					"insane.config.jsx",
 				]
 
-		watch({ candidates }).subscribe((config) => {
-			console.log("CONFIG", config)
-		})
+		watchConfig({ candidates })
+			.pipe(
+				map((config) =>
+					watchSources(config).pipe(map((sources) => ({ sources, config }))),
+				),
+			)
+			.pipe(switchAll())
+			.pipe(throttleTime(100))
+			.subscribe((sources) => {
+				console.log(sources)
+			})
 	},
 })

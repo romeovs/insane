@@ -3,10 +3,10 @@ import { loadDocuments } from "@graphql-tools/load"
 import type { DocumentNode } from "graphql"
 import { concatMap } from "rxjs"
 
-import { watch as watchFiles } from "~/build//watch"
+import { watch as watchFiles } from "~/build/watch"
 
 export type LoadDocumentsOptions = {
-	include: string[]
+	include?: string[]
 	exclude?: string[]
 }
 
@@ -17,7 +17,7 @@ type Source = {
 }
 
 export async function load(options: LoadDocumentsOptions): Promise<Source[]> {
-	const { include, exclude } = options
+	const { include = ["**/*"], exclude } = options
 
 	const sources = await loadDocuments(include, {
 		ignore: exclude,
