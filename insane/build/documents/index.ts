@@ -1,7 +1,9 @@
 import { CodeFileLoader } from "@graphql-tools/code-file-loader"
 import { loadDocuments } from "@graphql-tools/load"
-import chokidar, { type FSWatcher } from "chokidar"
 import type { DocumentNode } from "graphql"
+import { concatMap } from "rxjs"
+
+import { watch as watchFiles } from "~/build//watch"
 
 export type LoadDocumentsOptions = {
 	include: string[]
@@ -31,33 +33,6 @@ export async function load(options: LoadDocumentsOptions): Promise<Source[]> {
 	return sources
 }
 
-export async function* watch(
-	options: LoadDocumentsOptions & { signal?: AbortSignal },
-): AsyncGenerator<Source[]> {
-	const { include, exclude, signal } = options
-
-	signal?.addEventListener("abort", () => watcher.close())
-
-	const watcher = chokidar.watch(include, {
-		ignored: exclude,
-		persistent: true,
-	})
-
-	for (;;) {
-		await wait(watcher, signal)
-		const sources = await load(options)
-		yield sources
-	}
-}
-
-async function wait(watcher: FSWatcher, signal?: AbortSignal) {
-	await new Promise(function (resolve, reject) {
-		function handler() {
-			watcher.off("all", handler)
-			signal?.removeEventListener("abort", reject)
-			resolve(null)
-		}
-		watcher.on("all", handler)
-		signal?.addEventListener("abort", reject)
-	})
+export function watch(options: LoadDocumentsOptions) {
+	return watchFiles(options).pipe(concatMap(() => load(options)))
 }
