@@ -15,6 +15,8 @@
 		"vitest": "^3.1.2"
 	},
 	"dependencies": {
+		"@graphql-tools/code-file-loader": "^8.1.20",
+		"@graphql-tools/load": "^8.1.0",
 		"citty": "^0.1.6",
 		"inflection": "^3.0.2",
 		"typescript": "^5.8.3",
