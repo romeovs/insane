@@ -23,21 +23,14 @@ export async function find(options: FinderOptions) {
 export async function* watch(options: FinderOptions): AsyncGenerator<string> {
 	const { candidates, signal } = options
 
+	signal?.addEventListener("abort", () => watcher.close())
+
 	const watcher = chokidar.watch(candidates, {
 		ignored: ["**/.git", "**/node_modules"],
-		ignoreInitial: true,
 		persistent: true,
 	})
 
-	signal?.addEventListener("abort", () => watcher.close())
-
 	let current = null
-
-	const found = await find(options)
-	if (found) {
-		current = found
-		yield found
-	}
 
 	for (;;) {
 		try {
