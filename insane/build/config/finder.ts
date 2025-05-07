@@ -20,11 +20,11 @@ export async function find(options: FinderOptions) {
 	return filtered[0] ?? null
 }
 
-export function watch(options: FinderOptions): Observable<string> {
+export function watch(options: FinderOptions): Observable<string | Error> {
 	const { candidates } = options
 
 	return watchFiles({ include: candidates })
-		.pipe(concatMap(() => find(options)))
+		.pipe(concatMap(() => find(options).catch((err: Error) => err)))
 		.pipe(filter(Boolean))
 }
 

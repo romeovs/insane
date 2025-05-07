@@ -1,6 +1,6 @@
 import { CodeFileLoader } from "@graphql-tools/code-file-loader"
 import { loadDocuments } from "@graphql-tools/load"
-import { concatMap, distinct } from "rxjs"
+import { concatMap, distinctUntilChanged } from "rxjs"
 
 import { watch as watchFiles } from "~/build/watch"
 import { hash } from "~/lib/hash"
@@ -65,7 +65,10 @@ export async function load(options: LoadDocumentsOptions): Promise<Sources> {
 }
 
 export function watch(options: LoadDocumentsOptions) {
-	return watchFiles(options)
-		.pipe(concatMap(() => load(options)))
-		.pipe(distinct((x) => x.hash))
+	return watchFiles(options).pipe(
+		concatMap(() => load(options).catch((error: Error) => error)),
+		distinctUntilChanged(
+			(a, b) => !(a instanceof Error || b instanceof Error) && a.hash === b.hash,
+		),
+	)
 }

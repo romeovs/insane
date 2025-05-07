@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url"
 import {
 	type Observable,
 	concatMap,
-	distinct,
+	distinctUntilChanged,
 	filter,
 	from,
 	fromEventPattern,
@@ -33,7 +33,7 @@ export async function read(options: ConfigOptions) {
 	return readOutput()
 }
 
-export function watch(options: ConfigOptions): Observable<ConfigWithHash> {
+export function watch(options: ConfigOptions): Observable<ConfigWithHash | Error> {
 	const { configFile } = options
 
 	return from(makeVite(configFile, true))
@@ -50,9 +50,24 @@ export function watch(options: ConfigOptions): Observable<ConfigWithHash> {
 				),
 			),
 		)
-		.pipe(filter((evt) => evt.code === "END"))
-		.pipe(concatMap(readOutput))
-		.pipe(distinct((cfg) => cfg.hash))
+		.pipe(filter((evt) => evt.code === "END" || evt.code === "ERROR"))
+		.pipe(
+			concatMap(async (evt) => {
+				if (evt.code === "ERROR") {
+					return evt.error as Error
+				}
+				try {
+					return await readOutput()
+				} catch (err) {
+					return err as Error
+				}
+			}),
+		)
+		.pipe(
+			distinctUntilChanged(
+				(a, b) => !(a instanceof Error || b instanceof Error) && a.hash === b.hash,
+			),
+		)
 }
 
 // read the built file
