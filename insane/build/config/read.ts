@@ -1,20 +1,14 @@
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 
-import {
-	type Observable,
-	concatMap,
-	distinctUntilChanged,
-	filter,
-	from,
-	fromEventPattern,
-} from "rxjs"
+import { type Observable, concatMap, filter, from, fromEventPattern } from "rxjs"
 
 import glob from "fast-glob"
 import type { RollupOutput, RollupWatcher, RollupWatcherEvent } from "rollup"
 import { build as vite } from "vite"
 import tspaths from "vite-tsconfig-paths"
 
+import { distinctUntilChanged } from "~/build/observable"
 import type { InsaneConfig } from "~/lib/config"
 import { dir } from "~/lib/constants"
 import { hash } from "~/lib/hash"
@@ -36,38 +30,31 @@ export async function read(options: ConfigOptions) {
 export function watch(options: ConfigOptions): Observable<ConfigWithHash | Error> {
 	const { configFile } = options
 
-	return from(makeVite(configFile, true))
-		.pipe(
-			concatMap((watcher) =>
-				fromEventPattern<RollupWatcherEvent>(
-					function add(handler) {
-						watcher.on("event", handler)
-					},
-					function remove(handler) {
-						watcher.off("event", handler)
-						watcher.close()
-					},
-				),
+	return from(makeVite(configFile, true)).pipe(
+		concatMap((watcher) =>
+			fromEventPattern<RollupWatcherEvent>(
+				function add(handler) {
+					watcher.on("event", handler)
+				},
+				function remove(handler) {
+					watcher.off("event", handler)
+					watcher.close()
+				},
 			),
-		)
-		.pipe(filter((evt) => evt.code === "END" || evt.code === "ERROR"))
-		.pipe(
-			concatMap(async (evt) => {
-				if (evt.code === "ERROR") {
-					return evt.error as Error
-				}
-				try {
-					return await readOutput()
-				} catch (err) {
-					return err as Error
-				}
-			}),
-		)
-		.pipe(
-			distinctUntilChanged(
-				(a, b) => !(a instanceof Error || b instanceof Error) && a.hash === b.hash,
-			),
-		)
+		),
+		filter((evt) => evt.code === "END" || evt.code === "ERROR"),
+		concatMap(async (evt) => {
+			if (evt.code === "ERROR") {
+				return evt.error as Error
+			}
+			try {
+				return await readOutput()
+			} catch (err) {
+				return err as Error
+			}
+		}),
+		distinctUntilChanged((a, b) => a.hash === b.hash),
+	)
 }
 
 // read the built file

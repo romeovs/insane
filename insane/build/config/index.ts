@@ -1,4 +1,5 @@
-import { map, of, switchAll } from "rxjs"
+import { mapValue, switchAll } from "~/build/observable"
+
 import { find as findFile, watch as watchFiles } from "./finder"
 import { read as readConfig, watch as watchConfig } from "./read"
 
@@ -16,12 +17,7 @@ export async function read(options: ConfigOptions) {
 
 export function watch(options: ConfigOptions) {
 	return watchFiles(options).pipe(
-		map((configFile) => {
-			if (configFile instanceof Error) {
-				return of(configFile)
-			}
-			return watchConfig({ configFile })
-		}),
+		mapValue((configFile) => watchConfig({ configFile })),
 		switchAll(),
 	)
 }
