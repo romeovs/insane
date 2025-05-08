@@ -1,6 +1,13 @@
 import { defineCommand } from "citty"
 
-import { map, of, switchAll, throttleTime, withLatestFrom } from "rxjs"
+import {
+	asyncScheduler,
+	map,
+	of,
+	switchAll,
+	throttleTime,
+	withLatestFrom,
+} from "rxjs"
 
 import { watch as watchConfig } from "~/build/config"
 import { watch as watchSources } from "~/build/documents"
@@ -32,7 +39,7 @@ export default defineCommand({
 					)
 				}),
 				switchAll(),
-				throttleTime(100),
+				throttleTime(500, asyncScheduler, { leading: true, trailing: true }),
 			)
 			.subscribe((sources) => {
 				console.log(sources)
