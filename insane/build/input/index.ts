@@ -17,7 +17,7 @@ import {
 	type Sources,
 	load as loadDocuments,
 	watch as watchSources,
-} from "~/build/documents"
+} from "~/build/sources"
 
 export type InputOptions = {
 	candidates: string[]
