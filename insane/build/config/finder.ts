@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs"
 
 import { type Observable, concatMap, filter } from "rxjs"
-import { watch as watchFiles } from "~/build/watch"
+import { watch as watchFiles } from "~/build/files"
 
 export type FinderOptions = {
 	candidates: string[]

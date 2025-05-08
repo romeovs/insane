@@ -2,8 +2,8 @@ import { CodeFileLoader } from "@graphql-tools/code-file-loader"
 import { loadDocuments } from "@graphql-tools/load"
 import { concatMap } from "rxjs"
 
+import { watch as watchFiles } from "~/build/files"
 import { distinctUntilChanged } from "~/build/observable"
-import { watch as watchFiles } from "~/build/watch"
 import { hash } from "~/lib/hash"
 
 export type LoadDocumentsOptions = {
