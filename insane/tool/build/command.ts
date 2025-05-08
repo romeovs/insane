@@ -17,6 +17,6 @@ export default defineCommand({
 		})
 
 		console.log(input.config)
-		console.log(input.documents)
+		console.log(input.sources)
 	},
 })
