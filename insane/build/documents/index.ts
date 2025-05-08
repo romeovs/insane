@@ -6,7 +6,7 @@ import { watch as watchFiles } from "~/build/files"
 import { distinctUntilChanged } from "~/build/observable"
 import { hash } from "~/lib/hash"
 
-export type LoadDocumentsOptions = {
+export type LoadSourcesOptions = {
 	include?: string[]
 	exclude?: string[]
 }
@@ -27,7 +27,7 @@ export type Sources = {
 	sources: Source[]
 }
 
-export async function load(options: LoadDocumentsOptions): Promise<Sources> {
+export async function load(options: LoadSourcesOptions): Promise<Sources> {
 	const { include = ["**/*"], exclude } = options
 
 	const sources = await loadDocuments(include, {
@@ -65,7 +65,7 @@ export async function load(options: LoadDocumentsOptions): Promise<Sources> {
 	return result
 }
 
-export function watch(options: LoadDocumentsOptions) {
+export function watch(options: LoadSourcesOptions) {
 	return watchFiles(options).pipe(
 		concatMap(() => load(options).catch((error: Error) => error)),
 		distinctUntilChanged((a, b) => a.hash === b.hash),

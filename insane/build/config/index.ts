@@ -3,6 +3,8 @@ import { mapValue, switchAll } from "~/build/observable"
 import { find as findFile, watch as watchFiles } from "./finder"
 import { read as readConfig, watch as watchConfig } from "./read"
 
+export type { ConfigWithHash } from "./read.ts"
+
 type ConfigOptions = {
 	candidates: string[]
 }

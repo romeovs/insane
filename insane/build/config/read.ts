@@ -15,7 +15,7 @@ import { hash } from "~/lib/hash"
 
 const outDir = path.join(dir, "tmp")
 
-type ConfigWithHash = InsaneConfig & { hash: string }
+export type ConfigWithHash = InsaneConfig & { hash: string }
 
 type ConfigOptions = {
 	configFile: string

@@ -1,8 +1,6 @@
 import { defineCommand } from "citty"
 
-import { read as readConfig } from "~/build/config"
-import { load as loadDocuments } from "~/build/documents"
-
+import { read as readInput } from "~/build/input"
 import { configFile, parseConfigFile } from "~/tool/args"
 
 export default defineCommand({
@@ -14,15 +12,11 @@ export default defineCommand({
 		configFile,
 	},
 	async run(ctx) {
-		const config = await readConfig({
+		const input = await readInput({
 			candidates: parseConfigFile(ctx.args),
 		})
-		const documents = await loadDocuments({
-			include: config.include ?? [],
-			exclude: config.exclude ?? [],
-		})
 
-		console.log(config)
-		console.log(documents)
+		console.log(input.config)
+		console.log(input.documents)
 	},
 })
