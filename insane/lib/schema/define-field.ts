@@ -3,14 +3,14 @@ import type { InsaneDataType } from "./registry"
 export type InsaneFieldDefinition = {
 	name: string
 	type: InsaneDataType
-	deprecated?: boolean | undefined | null
+	deprecated?: string | undefined | null
 	description?: string | undefined | null
 }
 
 export type InsaneField = {
 	name: string
 	type: InsaneDataType
-	deprecated: boolean
+	deprecated: string | null
 	description: string | null
 }
 
@@ -18,7 +18,7 @@ export function defineField(defn: InsaneFieldDefinition): InsaneField {
 	return {
 		name: defn.name,
 		type: defn.type,
-		deprecated: Boolean(defn.deprecated),
+		deprecated: defn.deprecated ?? null,
 		description: defn.description ?? null,
 	}
 }

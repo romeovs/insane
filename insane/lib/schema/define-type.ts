@@ -1,4 +1,5 @@
 import type { InsaneField } from "./define-field"
+import { camelize, capitalize, classify, humanize, pluralize } from "./util"
 
 export type InsaneTypeDefinition = {
 	name: string
@@ -22,7 +23,7 @@ export type InsaneTypeDefinition = {
 
 export type InsaneType = {
 	name: string
-	deprecated: boolean
+	deprecated: string | null
 	description: string | null
 
 	names: {
@@ -41,5 +42,19 @@ export type InsaneType = {
 }
 
 export function defineType(defn: InsaneTypeDefinition) {
-	return defn
+	const title = defn.title ?? capitalize(humanize(defn.name))
+	return {
+		...defn,
+		title,
+		names: {
+			display: {
+				plural: defn.names?.display?.plural ?? pluralize(title),
+			},
+			graphql: {
+				singular: defn.names?.graphql?.singular ?? camelize(defn.name),
+				plural: defn.names?.graphql?.plural ?? camelize(pluralize(defn.name)),
+				type: defn.names?.graphql?.type ?? classify(camelize(defn.name)),
+			},
+		},
+	}
 }
