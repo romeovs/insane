@@ -29,6 +29,9 @@ importers:
       graphile-config:
         specifier: 0.0.1-beta.15
         version: 0.0.1-beta.15
+      graphile-export:
+        specifier: 0.0.2-beta.26
+        version: 0.0.2-beta.26(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7))
       graphile-utils:
         specifier: 5.0.0-beta.38
         version: 5.0.0-beta.38(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7))(graphile-build@5.0.0-beta.33(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7))(graphile-config@0.0.1-beta.15)(graphql@16.11.0))(graphile-config@0.0.1-beta.15)(graphql@16.11.0)(tamedevil@0.0.0-beta.7)
@@ -944,6 +947,19 @@ packages:
     resolution: {integrity: sha512-J+hYqhZlx5yY7XdU7XjOAqNCAUZU33fEx3PdkNc1cfAAbo1TNMWiib4DFH5XkT8BagJtTyFrMnDCuKxnphCu+g==}
     engines: {node: '>=16'}
 
+  graphile-export@0.0.2-beta.26:
+    resolution: {integrity: sha512-F/VwojFj+UWKUcL5kiLeeYNLTKJzK19rC9rZO1Ga/4NVCAAx2azscocDKlpJE7W+LYcPwtZkYhESKwfLOts8zw==}
+    engines: {node: '>=16'}
+    peerDependencies:
+      eslint: ^8.48.0
+      grafast: ^0.1.1-beta.21
+      pg-sql2: ^5.0.0-beta.8
+    peerDependenciesMeta:
+      eslint:
+        optional: true
+      pg-sql2:
+        optional: true
+
   graphile-utils@5.0.0-beta.38:
     resolution: {integrity: sha512-XKOq/mhMWwPTB/yenMvcozW+tX47ChCEc7BT9KKmFlh77PVx6XKi8UMnGZx2vEvy/RxExf/ii5jPomwUtQBIGg==}
     engines: {node: '>=14.17'}
@@ -1142,6 +1158,11 @@ packages:
   postcss@8.5.3:
     resolution: {integrity: sha512-dle9A3yYxlBSrt8Fu+IpjGT8SY8hN0mlaA6GY8t0P5PjIOZemULz/E2Bnm/2dcUOena75OTNkHI76uZBNUUq3A==}
     engines: {node: ^10 || ^12 || >=14}
+
+  prettier@3.5.3:
+    resolution: {integrity: sha512-QQtaxnoDJeAkDvDKWCLiwIXkTgRhwYDEQCghU9Z6q03iyek/rxRh/2lC3HB7P8sWT2xC/y5JDctPLBIGzHKbhw==}
+    engines: {node: '>=14'}
+    hasBin: true
 
   punycode@2.3.1:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
@@ -2306,6 +2327,20 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  graphile-export@0.0.2-beta.26(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7)):
+    dependencies:
+      '@babel/generator': 7.27.1
+      '@babel/parser': 7.27.1
+      '@babel/template': 7.27.1
+      '@babel/traverse': 7.27.1
+      '@babel/types': 7.27.1
+      '@types/node': 20.17.46
+      grafast: 0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7)
+      prettier: 3.5.3
+      tslib: 2.8.1
+    transitivePeerDependencies:
+      - supports-color
+
   graphile-utils@5.0.0-beta.38(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7))(graphile-build@5.0.0-beta.33(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7))(graphile-config@0.0.1-beta.15)(graphql@16.11.0))(graphile-config@0.0.1-beta.15)(graphql@16.11.0)(tamedevil@0.0.0-beta.7):
     dependencies:
       debug: 4.4.0
@@ -2466,6 +2501,8 @@ snapshots:
       nanoid: 3.3.11
       picocolors: 1.1.1
       source-map-js: 1.2.1
+
+  prettier@3.5.3: {}
 
   punycode@2.3.1: {}
 

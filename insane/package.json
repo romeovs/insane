@@ -21,6 +21,7 @@
 		"citty": "^0.1.6",
 		"graphile-build": "5.0.0-beta.33",
 		"graphile-config": "0.0.1-beta.15",
+		"graphile-export": "0.0.2-beta.26",
 		"graphile-utils": "5.0.0-beta.38",
 		"graphql": "^16.11.0",
 		"inflection": "^3.0.2",
