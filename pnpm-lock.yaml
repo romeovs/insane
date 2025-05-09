@@ -16,7 +16,7 @@ importers:
     dependencies:
       '@dataplan/pg':
         specifier: 0.0.1-beta.32
-        version: 0.0.1-beta.32(@dataplan/json@0.0.1-beta.30(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7)))(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7))(graphile-config@0.0.1-beta.15)(pg-sql2@5.0.0-beta.8)
+        version: 0.0.1-beta.32(@dataplan/json@0.0.1-beta.30(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7)))(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7))(graphile-config@0.0.1-beta.15)(pg-sql2@5.0.0-beta.8)(pg@8.15.6)
       '@graphql-tools/code-file-loader':
         specifier: ^8.1.20
         version: 8.1.20(graphql@16.11.0)
@@ -40,7 +40,7 @@ importers:
         version: 0.0.2-beta.26(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7))(pg-sql2@5.0.0-beta.8)
       graphile-utils:
         specifier: 5.0.0-beta.38
-        version: 5.0.0-beta.38(@dataplan/pg@0.0.1-beta.32(@dataplan/json@0.0.1-beta.30(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7)))(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7))(graphile-config@0.0.1-beta.15)(pg-sql2@5.0.0-beta.8))(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7))(graphile-build@5.0.0-beta.33(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7))(graphile-config@0.0.1-beta.15)(graphql@16.11.0))(graphile-config@0.0.1-beta.15)(graphql@16.11.0)(tamedevil@0.0.0-beta.7)
+        version: 5.0.0-beta.38(@dataplan/pg@0.0.1-beta.32(@dataplan/json@0.0.1-beta.30(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7)))(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7))(graphile-config@0.0.1-beta.15)(pg-sql2@5.0.0-beta.8)(pg@8.15.6))(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7))(graphile-build@5.0.0-beta.33(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7))(graphile-config@0.0.1-beta.15)(graphql@16.11.0))(graphile-config@0.0.1-beta.15)(graphql@16.11.0)(tamedevil@0.0.0-beta.7)
       graphql:
         specifier: ^16.11.0
         version: 16.11.0
@@ -50,6 +50,9 @@ importers:
       micromatch:
         specifier: ^4.0.8
         version: 4.0.8
+      pg-sql2:
+        specifier: 5.0.0-beta.8
+        version: 5.0.0-beta.8
       rxjs:
         specifier: ^7.8.2
         version: 7.8.2
@@ -1161,9 +1164,43 @@ packages:
     resolution: {integrity: sha512-vE7JKRyES09KiunauX7nd2Q9/L7lhok4smP9RZTDeD4MVs72Dp2qNFVz39Nz5a0FVEW0BJR6C0DYrq6unoziZA==}
     engines: {node: '>= 14.16'}
 
+  pg-cloudflare@1.2.5:
+    resolution: {integrity: sha512-OOX22Vt0vOSRrdoUPKJ8Wi2OpE/o/h9T8X1s4qSkCedbNah9ei2W2765be8iMVxQUsvgT7zIAT2eIa9fs5+vtg==}
+
+  pg-connection-string@2.8.5:
+    resolution: {integrity: sha512-Ni8FuZ8yAF+sWZzojvtLE2b03cqjO5jNULcHFfM9ZZ0/JXrgom5pBREbtnAw7oxsxJqHw9Nz/XWORUEL3/IFow==}
+
+  pg-int8@1.0.1:
+    resolution: {integrity: sha512-WCtabS6t3c8SkpDBUlb1kjOs7l66xsGdKpIPZsg4wR+B3+u9UAum2odSsF9tnvxg80h4ZxLWMy4pRjOsFIqQpw==}
+    engines: {node: '>=4.0.0'}
+
+  pg-pool@3.9.6:
+    resolution: {integrity: sha512-rFen0G7adh1YmgvrmE5IPIqbb+IgEzENUm+tzm6MLLDSlPRoZVhzU1WdML9PV2W5GOdRA9qBKURlbt1OsXOsPw==}
+    peerDependencies:
+      pg: '>=8.0'
+
+  pg-protocol@1.9.5:
+    resolution: {integrity: sha512-DYTWtWpfd5FOro3UnAfwvhD8jh59r2ig8bPtc9H8Ds7MscE/9NYruUQWFAOuraRl29jwcT2kyMFQ3MxeaVjUhg==}
+
   pg-sql2@5.0.0-beta.8:
     resolution: {integrity: sha512-qNhtl9iVRhAfRuMOKwWgh0t7EajyIhc0Gd25vNwaX2zbiXtpFanaX0TK7AD0+Aen9TejZ7IsGl7aYRZbr9aRfQ==}
     engines: {node: '>=14.17'}
+
+  pg-types@2.2.0:
+    resolution: {integrity: sha512-qTAAlrEsl8s4OiEQY69wDvcMIdQN6wdz5ojQiOy6YRMuynxenON0O5oCpJI6lshc6scgAY8qvJ2On/p+CXY0GA==}
+    engines: {node: '>=4'}
+
+  pg@8.15.6:
+    resolution: {integrity: sha512-yvao7YI3GdmmrslNVsZgx9PfntfWrnXwtR+K/DjI0I/sTKif4Z623um+sjVZ1hk5670B+ODjvHDAckKdjmPTsg==}
+    engines: {node: '>= 8.0.0'}
+    peerDependencies:
+      pg-native: '>=3.0.1'
+    peerDependenciesMeta:
+      pg-native:
+        optional: true
+
+  pgpass@1.0.5:
+    resolution: {integrity: sha512-FdW9r/jQZhSeohs1Z3sI1yxFQNFvMcnmfuj4WBMUTxOrAyLMaTcE1aAMBiTlbMNaXvBCQuVi0R7hd8udDSP7ug==}
 
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
@@ -1190,9 +1227,25 @@ packages:
     resolution: {integrity: sha512-dle9A3yYxlBSrt8Fu+IpjGT8SY8hN0mlaA6GY8t0P5PjIOZemULz/E2Bnm/2dcUOena75OTNkHI76uZBNUUq3A==}
     engines: {node: ^10 || ^12 || >=14}
 
+  postgres-array@2.0.0:
+    resolution: {integrity: sha512-VpZrUqU5A69eQyW2c5CA1jtLecCsN2U/bD6VilrFDWq5+5UIEVO7nazS3TEcHf1zuPYO/sqGvUvW62g86RXZuA==}
+    engines: {node: '>=4'}
+
   postgres-array@3.0.4:
     resolution: {integrity: sha512-nAUSGfSDGOaOAEGwqsRY27GPOea7CNipJPOA7lPbdEpx5Kg3qzdP0AaWC5MlhTWV9s4hFX39nomVZ+C4tnGOJQ==}
     engines: {node: '>=12'}
+
+  postgres-bytea@1.0.0:
+    resolution: {integrity: sha512-xy3pmLuQqRBZBXDULy7KbaitYqLcmxigw14Q5sj8QBVLqEwXfeybIKVWiqAXTlcvdvb0+xkOtDbfQMOf4lST1w==}
+    engines: {node: '>=0.10.0'}
+
+  postgres-date@1.0.7:
+    resolution: {integrity: sha512-suDmjLVQg78nMK2UZ454hAG+OAW+HQPZ6n++TNDUX+L0+uUlLywnoxJKDou51Zm+zTCjrCl0Nq6J9C5hP9vK/Q==}
+    engines: {node: '>=0.10.0'}
+
+  postgres-interval@1.2.0:
+    resolution: {integrity: sha512-9ZhXKM/rw350N1ovuWHbGxnGh/SNJ4cnxHiM0rxE4VN41wsg8P8zWn9hv/buK00RP4WvlOyr/RBDiptyxVbkZQ==}
+    engines: {node: '>=0.10.0'}
 
   postgres-range@1.1.4:
     resolution: {integrity: sha512-i/hbxIE9803Alj/6ytL7UHQxRvZkI9O4Sy+J3HGc4F4oo/2eQAjTSNJ0bfxyse3bH0nuVesCk+3IRLaMtG3H6w==}
@@ -1270,6 +1323,10 @@ packages:
   source-map@0.6.1:
     resolution: {integrity: sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==}
     engines: {node: '>=0.10.0'}
+
+  split2@4.2.0:
+    resolution: {integrity: sha512-UcjcJOWknrNkF6PLX83qcHM6KHgVKNkV62Y8a5uYDVv9ydGQVwAHMKqHdJje1VTWpljG0WYpCDhrCdAOYH4TWg==}
+    engines: {node: '>= 10.x'}
 
   sprintf-js@1.0.3:
     resolution: {integrity: sha512-D9cPgkvLlV3t3IzL0D0YLvGA9Ahk4PcvVwUbN0dSGr1aP0Nrt4AEnTUbuGvquEC0mA64Gqt1fzirlRs5ibXx8g==}
@@ -1492,6 +1549,10 @@ packages:
     resolution: {integrity: sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==}
     engines: {node: '>=10'}
 
+  xtend@4.0.2:
+    resolution: {integrity: sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ==}
+    engines: {node: '>=0.4'}
+
   xxhash-wasm@1.1.0:
     resolution: {integrity: sha512-147y/6YNh+tlp6nd/2pWq38i9h6mz/EuQ6njIrmW8D1BS5nCqs0P6DG+m6zTGnNz5I+uhZ0SHxBs9BsPrwcKDA==}
 
@@ -1670,7 +1731,7 @@ snapshots:
       grafast: 0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7)
       tslib: 2.8.1
 
-  '@dataplan/pg@0.0.1-beta.32(@dataplan/json@0.0.1-beta.30(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7)))(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7))(graphile-config@0.0.1-beta.15)(pg-sql2@5.0.0-beta.8)':
+  '@dataplan/pg@0.0.1-beta.32(@dataplan/json@0.0.1-beta.30(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7)))(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7))(graphile-config@0.0.1-beta.15)(pg-sql2@5.0.0-beta.8)(pg@8.15.6)':
     dependencies:
       '@dataplan/json': 0.0.1-beta.30(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7))
       '@graphile/lru': 5.0.0-beta.3
@@ -1685,6 +1746,7 @@ snapshots:
       tslib: 2.8.1
     optionalDependencies:
       graphile-config: 0.0.1-beta.15
+      pg: 8.15.6
     transitivePeerDependencies:
       - supports-color
 
@@ -2405,7 +2467,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  graphile-utils@5.0.0-beta.38(@dataplan/pg@0.0.1-beta.32(@dataplan/json@0.0.1-beta.30(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7)))(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7))(graphile-config@0.0.1-beta.15)(pg-sql2@5.0.0-beta.8))(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7))(graphile-build@5.0.0-beta.33(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7))(graphile-config@0.0.1-beta.15)(graphql@16.11.0))(graphile-config@0.0.1-beta.15)(graphql@16.11.0)(tamedevil@0.0.0-beta.7):
+  graphile-utils@5.0.0-beta.38(@dataplan/pg@0.0.1-beta.32(@dataplan/json@0.0.1-beta.30(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7)))(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7))(graphile-config@0.0.1-beta.15)(pg-sql2@5.0.0-beta.8)(pg@8.15.6))(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7))(graphile-build@5.0.0-beta.33(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7))(graphile-config@0.0.1-beta.15)(graphql@16.11.0))(graphile-config@0.0.1-beta.15)(graphql@16.11.0)(tamedevil@0.0.0-beta.7):
     dependencies:
       debug: 4.4.0
       grafast: 0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7)
@@ -2416,7 +2478,7 @@ snapshots:
       tamedevil: 0.0.0-beta.7
       tslib: 2.8.1
     optionalDependencies:
-      '@dataplan/pg': 0.0.1-beta.32(@dataplan/json@0.0.1-beta.30(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7)))(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7))(graphile-config@0.0.1-beta.15)(pg-sql2@5.0.0-beta.8)
+      '@dataplan/pg': 0.0.1-beta.32(@dataplan/json@0.0.1-beta.30(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7)))(grafast@0.1.1-beta.21(graphql@16.11.0)(tamedevil@0.0.0-beta.7))(graphile-config@0.0.1-beta.15)(pg-sql2@5.0.0-beta.8)(pg@8.15.6)
     transitivePeerDependencies:
       - supports-color
 
@@ -2542,10 +2604,52 @@ snapshots:
 
   pathval@2.0.0: {}
 
+  pg-cloudflare@1.2.5:
+    optional: true
+
+  pg-connection-string@2.8.5:
+    optional: true
+
+  pg-int8@1.0.1:
+    optional: true
+
+  pg-pool@3.9.6(pg@8.15.6):
+    dependencies:
+      pg: 8.15.6
+    optional: true
+
+  pg-protocol@1.9.5:
+    optional: true
+
   pg-sql2@5.0.0-beta.8:
     dependencies:
       '@graphile/lru': 5.0.0-beta.3
       tslib: 2.8.1
+
+  pg-types@2.2.0:
+    dependencies:
+      pg-int8: 1.0.1
+      postgres-array: 2.0.0
+      postgres-bytea: 1.0.0
+      postgres-date: 1.0.7
+      postgres-interval: 1.2.0
+    optional: true
+
+  pg@8.15.6:
+    dependencies:
+      pg-connection-string: 2.8.5
+      pg-pool: 3.9.6(pg@8.15.6)
+      pg-protocol: 1.9.5
+      pg-types: 2.2.0
+      pgpass: 1.0.5
+    optionalDependencies:
+      pg-cloudflare: 1.2.5
+    optional: true
+
+  pgpass@1.0.5:
+    dependencies:
+      split2: 4.2.0
+    optional: true
 
   picocolors@1.1.1: {}
 
@@ -2573,7 +2677,21 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
+  postgres-array@2.0.0:
+    optional: true
+
   postgres-array@3.0.4: {}
+
+  postgres-bytea@1.0.0:
+    optional: true
+
+  postgres-date@1.0.7:
+    optional: true
+
+  postgres-interval@1.2.0:
+    dependencies:
+      xtend: 4.0.2
+    optional: true
 
   postgres-range@1.1.4: {}
 
@@ -2648,6 +2766,9 @@ snapshots:
   source-map-js@1.2.1: {}
 
   source-map@0.6.1: {}
+
+  split2@4.2.0:
+    optional: true
 
   sprintf-js@1.0.3: {}
 
@@ -2851,6 +2972,9 @@ snapshots:
       ansi-styles: 4.3.0
       string-width: 4.2.3
       strip-ansi: 6.0.1
+
+  xtend@4.0.2:
+    optional: true
 
   xxhash-wasm@1.1.0: {}
 
