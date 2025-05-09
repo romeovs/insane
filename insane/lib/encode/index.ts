@@ -4,7 +4,12 @@ import * as int from "~/lib/int64"
 const alphabet = "34ACDEFHJLMNPRTXY"
 const len = 22
 
-class SqidsEncoder {
+export type Encoding = {
+	encode(x: Uint8Array): string
+	decode(x: string): Uint8Array
+}
+
+export class SqidsEncoder {
 	#sqids: Sqids
 	#len: number
 
