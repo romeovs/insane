@@ -3,9 +3,9 @@ import { camelize, capitalize, classify, humanize, pluralize } from "./util"
 
 export type InsaneTypeDefinition = {
 	name: string
-	title?: string | undefined | null
-	deprecated?: boolean | undefined | null
-	description?: string | undefined | null
+	title?: string | undefined
+	deprecated?: boolean | undefined
+	description?: string | undefined
 
 	names?: {
 		display?: {
@@ -19,6 +19,7 @@ export type InsaneTypeDefinition = {
 	}
 
 	fields: InsaneField[]
+	validate?: (value: unknown) => string | null
 }
 
 export type InsaneType = {
@@ -39,22 +40,55 @@ export type InsaneType = {
 	}
 
 	fields: InsaneField[]
+	validate: (value: unknown) => string | null
 }
 
 export function defineType(defn: InsaneTypeDefinition) {
-	const title = defn.title ?? capitalize(humanize(defn.name))
+	const {
+		name,
+		title = capitalize(humanize(name)),
+		names: { display = {}, graphql = {} } = {},
+		validate = () => null,
+	} = defn
+
 	return {
 		...defn,
+		name: validateName(name),
 		title,
 		names: {
 			display: {
-				plural: defn.names?.display?.plural ?? pluralize(title),
+				singular: title ?? humanize(name),
+				plural: display.plural ?? pluralize(title),
 			},
 			graphql: {
-				singular: defn.names?.graphql?.singular ?? camelize(defn.name),
-				plural: defn.names?.graphql?.plural ?? camelize(pluralize(defn.name)),
-				type: defn.names?.graphql?.type ?? classify(camelize(defn.name)),
+				singular: validateGraphqlName(graphql.singular ?? camelize(defn.name)),
+				plural: validateGraphqlName(
+					graphql.plural ?? camelize(pluralize(defn.name)),
+				),
+				type: validateGraphqlTypeName(graphql.type ?? classify(camelize(defn.name))),
 			},
 		},
+		validate,
 	}
+}
+
+function validateName(name: string) {
+	if (!/[a-zA-Z][a-zA-Z0-9_-]*/.test(name)) {
+		throw new Error(`Invalid type name: ${name}`)
+	}
+	return name
+}
+
+function validateGraphqlName(name: string) {
+	if (!/[a-zA-Z][a-zA-Z0-9_]*/.test(name)) {
+		throw new Error(`Invalid GraphQL name: ${name}`)
+	}
+	return name
+}
+
+function validateGraphqlTypeName(name: string) {
+	if (!/[A-Z][a-zA-Z0-9_]*/.test(name)) {
+		throw new Error(`Invalid GraphQL type name: ${name}`)
+	}
+	return name
 }
