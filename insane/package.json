@@ -7,8 +7,11 @@
 	"devDependencies": {
 		"@types/micromatch": "^4.0.9",
 		"@types/node": "^22.15.3",
+		"@types/pg": "^8.15.1",
 		"chokidar": "^4.0.3",
 		"fast-glob": "^3.3.3",
+		"grafserv": "0.1.1-beta.24",
+		"pg": "^8.15.6",
 		"rollup": "^4.40.1",
 		"vite": "^6.3.4",
 		"vite-plugin-dts": "^4.5.3",
