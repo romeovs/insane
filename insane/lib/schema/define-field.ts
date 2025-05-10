@@ -5,6 +5,7 @@ export type InsaneFieldDefinition = {
 	type: InsaneDataType
 	deprecated?: string | undefined | null
 	description?: string | undefined | null
+	required?: boolean | undefined
 }
 
 export type InsaneField = {
@@ -12,6 +13,7 @@ export type InsaneField = {
 	type: InsaneDataType
 	deprecated: string | null
 	description: string | null
+	required: boolean
 }
 
 export function defineField(defn: InsaneFieldDefinition): InsaneField {
@@ -20,5 +22,6 @@ export function defineField(defn: InsaneFieldDefinition): InsaneField {
 		type: defn.type,
 		deprecated: defn.deprecated ?? null,
 		description: defn.description ?? null,
+		required: defn.required ?? false,
 	}
 }
