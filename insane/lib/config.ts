@@ -1,4 +1,5 @@
-import type { InsaneTypeDefinition } from "~/lib/schema"
+import type { InsaneType, InsaneTypeDefinition } from "~/lib/schema"
+import type { LanguageCode } from "./language"
 
 export type InsaneConfig = {
 	/**
@@ -25,6 +26,28 @@ export type InsaneConfig = {
 	 * The types you will use in your application.
 	 */
 	types: InsaneTypeDefinition[]
+
+	language?: {
+		/**
+		 * The default language to use when no language is specified.
+		 */
+		defaultLanguage?: LanguageCode
+
+		/**
+		 * The available languages in the application.
+		 */
+		languages?: LanguageCode[]
+	}
+}
+
+export type ValidInsaneConfig = {
+	include: string[]
+	exclude: string[]
+	types: InsaneType[]
+	language: {
+		defaultLanguage: LanguageCode
+		languages: LanguageCode[]
+	}
 }
 
 export function defineConfig(config: InsaneConfig) {
