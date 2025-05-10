@@ -51,5 +51,20 @@ export type ValidInsaneConfig = {
 }
 
 export function defineConfig(config: InsaneConfig) {
-	return config
+	const {
+		include = ["**/*.ts", "**/*.tsx"],
+		exclude = [],
+		types = [],
+		language: { defaultLanguage = "en", languages = ["en"] } = {},
+	} = config
+
+	return {
+		include,
+		exclude,
+		types,
+		language: {
+			defaultLanguage,
+			languages,
+		},
+	}
 }
