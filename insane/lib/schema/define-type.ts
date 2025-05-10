@@ -4,7 +4,7 @@ import { camelize, capitalize, classify, humanize, pluralize } from "./util"
 export type InsaneTypeDefinition = {
 	name: string
 	title?: string | undefined
-	deprecated?: boolean | undefined
+	deprecated?: string | undefined
 	description?: string | undefined
 
 	names?: {
@@ -24,6 +24,7 @@ export type InsaneTypeDefinition = {
 
 export type InsaneType = {
 	name: string
+	title: string
 	deprecated: string | null
 	description: string | null
 
@@ -43,17 +44,21 @@ export type InsaneType = {
 	validate: (value: unknown) => string | null
 }
 
-export function defineType(defn: InsaneTypeDefinition) {
+export function defineType(defn: InsaneTypeDefinition): InsaneType {
 	const {
 		name,
 		title = capitalize(humanize(name)),
 		names: { display = {}, graphql = {} } = {},
 		validate = () => null,
+		deprecated = null,
+		description = null,
 	} = defn
 
 	return {
 		...defn,
 		name: validateName(name),
+		deprecated,
+		description,
 		title,
 		names: {
 			display: {

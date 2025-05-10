@@ -9,13 +9,13 @@ import { build as vite } from "vite"
 import tspaths from "vite-tsconfig-paths"
 
 import { distinctUntilChanged } from "~/build/observable"
-import type { InsaneConfig } from "~/lib/config"
+import type { ValidInsaneConfig } from "~/lib/config"
 import { dir } from "~/lib/constants"
 import { hash } from "~/lib/hash"
 
 const outDir = path.join(dir, "tmp")
 
-export type ConfigWithHash = InsaneConfig & { hash: string }
+export type ConfigWithHash = ValidInsaneConfig & { hash: string }
 
 type ConfigOptions = {
 	configFile: string
