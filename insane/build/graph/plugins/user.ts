@@ -1,16 +1,19 @@
 import { EXPORTABLE } from "graphile-utils"
 import { version } from "~/lib/version"
 
-import type { PgSelectSingleStep } from "@dataplan/pg"
+import {
+	type PgSelectQueryBuilderCallback,
+	PgSelectSingleStep,
+	type PgSelectStep,
+} from "@dataplan/pg"
+import { lambda } from "grafast"
+import { sql } from "pg-sql2"
 import { decode, encode } from "~/lib/uid/plan"
 
-const id = EXPORTABLE(
-	(encode) =>
-		function ($document: PgSelectSingleStep) {
-			return encode($document.get("uid"))
-		},
-	[encode],
-)
+type UserResource = GraphileBuild.Build["input"]["pgRegistry"]["pgResources"]["user"]
+
+type UserStep = PgSelectSingleStep<UserResource>
+type UsersStep = PgSelectStep<UserResource>
 
 export const UserPlugin: GraphileConfig.Plugin = {
 	name: "UserPlugin",
@@ -27,15 +30,18 @@ export const UserPlugin: GraphileConfig.Plugin = {
 					() => ({
 						name: "User",
 						interfaces: () => [build.getInterfaceTypeByName("Node")],
+						assertStep: PgSelectSingleStep,
 						fields: {
 							id: {
 								description: "The globally unique identifier of the user.",
 								type: new GraphQLNonNull(GraphQLID),
-								extensions: {
-									grafast: {
-										plan: id,
-									},
-								},
+								plan: EXPORTABLE(
+									(encode) =>
+										function ($document: UserStep) {
+											return encode($document.get("uid"))
+										},
+									[encode],
+								),
 							},
 							username: {
 								description:
@@ -77,30 +83,43 @@ export const UserPlugin: GraphileConfig.Plugin = {
 								},
 							},
 							plan: EXPORTABLE(
-								(decode, registry) =>
+								(decode, registry, sql, lambda) =>
 									function (_, args) {
 										const $id = args.getRaw("id")
 										const $username = args.getRaw("username")
 
-										const hasId = !$id?.evalIs(undefined)
-										const hasUsername = !$username?.evalIs(undefined)
+										const $filter = lambda(
+											[decode($id), $username],
+											([id, username]): PgSelectQueryBuilderCallback => {
+												return (qb) => {
+													if (id !== undefined && username !== undefined) {
+														throw new Error(
+															"only one of id or username can be passed",
+														)
+													}
+													if (id === undefined && username === undefined) {
+														throw new Error(
+															"at least one of id or username must be passed",
+														)
+													}
+													if (id !== undefined) {
+														return qb.where(sql`${qb.alias}.uid = ${sql.value(id)}`)
+													}
+													if (username !== undefined) {
+														return qb.where(
+															sql`${qb.alias}.username = ${sql.value(username)}`,
+														)
+													}
+												}
+											},
+											true,
+										)
 
-										if (hasId && hasUsername) {
-											throw new Error("only one of id or username can be passed")
-										}
-
-										if (hasId) {
-											const $uid = decode($id!)
-											return registry.pgResources.user.get({ uid: $uid })
-										}
-
-										if (hasUsername) {
-											return registry.pgResources.user.get({ username: $username! })
-										}
-
-										throw new Error("id or username is required")
+										const $select = registry.pgResources.user.find()
+										$select.apply($filter)
+										return $select.single()
 									},
-								[decode, build.input.pgRegistry],
+								[decode, build.input.pgRegistry, sql, lambda],
 							),
 						})),
 						users: context.fieldWithHooks({ fieldName: "users" }, () => ({
@@ -112,7 +131,7 @@ export const UserPlugin: GraphileConfig.Plugin = {
 							),
 							plan: EXPORTABLE(
 								(registry) =>
-									function () {
+									function (): UsersStep {
 										return registry.pgResources.user.find()
 									},
 								[build.input.pgRegistry],
