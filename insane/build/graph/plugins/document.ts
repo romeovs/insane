@@ -1,16 +1,23 @@
 import {
 	type PgCodec,
 	type PgSelectSingleStep,
+	type PgSelectStep,
 	TYPES,
 	pgPolymorphic,
 } from "@dataplan/pg"
-import { connection, lambda } from "grafast"
+import { type FieldArgs, connection, constant, lambda } from "grafast"
 import { EXPORTABLE } from "graphile-utils"
 import type { GraphQLFieldConfigMap, GraphQLOutputType } from "graphql"
 import { sql } from "pg-sql2"
 
 import { decode, encode } from "~/lib/uid/plan"
 import { version } from "~/lib/version"
+
+type DocumentResource =
+	GraphileBuild.Build["input"]["pgRegistry"]["pgResources"]["document"]
+
+type DocumentStep = PgSelectSingleStep<DocumentResource>
+type DocumentsStep = PgSelectStep<DocumentResource>
 
 export const DocumentPlugin: GraphileConfig.Plugin = {
 	name: "DocumentPlugin",
@@ -33,19 +40,15 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 							status: {
 								description: "The publishing status of the document.",
 								type: new GraphQLNonNull(build.getEnumTypeByName("Status")),
-								extensions: {
-									grafast: {
-										plan: EXPORTABLE(
-											(lambda) => ($document: PgSelectSingleStep) =>
-												lambda(
-													$document.get("status"),
-													(input: string) => input.toUpperCase(),
-													true,
-												),
-											[lambda],
+								plan: EXPORTABLE(
+									(lambda) => ($document: DocumentStep) =>
+										lambda(
+											$document.get("status"),
+											(input: string) => input.toUpperCase(),
+											true,
 										),
-									},
-								},
+									[lambda],
+								),
 							},
 							version: {
 								description: "The current version of the document.",
@@ -78,11 +81,7 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 							id: {
 								description: "The globally unique identifier of the document.",
 								type: new GraphQLNonNull(GraphQLID),
-								extensions: {
-									grafast: {
-										plan: id,
-									},
-								},
+								plan: id,
 							},
 							metadata: {
 								description: "The metadata for the document.",
@@ -116,19 +115,13 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 								id: {
 									description: `The globally unique identifier of the ${type.names.graphql.singular}.`,
 									type: new GraphQLNonNull(GraphQLID),
-									extensions: {
-										grafast: {
-											plan: id,
-										},
-									},
+									plan: id,
 								},
 								metadata: {
 									description: `The metadata for the ${type.names.graphql.singular} document.`,
 									type: build.getObjectTypeByName("DocumentMetadata"),
-									extensions: {
-										grafast: {
-											plan: EXPORTABLE(() => ($document) => $document, []),
-										},
+									plan($document) {
+										return $document
 									},
 								},
 							}),
@@ -154,6 +147,8 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 				return _
 			},
 			GraphQLObjectType_fields(fields, build, context) {
+				const { GraphQLString, GraphQLInt } = build.graphql
+
 				if (context.Self.name === "Query") {
 					const { GraphQLID, GraphQLNonNull } = build.graphql
 
@@ -162,11 +157,13 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 							type.names.graphql.type,
 							{
 								match: EXPORTABLE(
-									(name) => (specifier: string) => specifier === name,
+									(name) => (specifier: string) => {
+										return specifier === name
+									},
 									[type.name],
 								),
 								plan: EXPORTABLE(
-									() => (_: unknown, $document: PgSelectSingleStep) => $document,
+									() => (_: unknown, $document: DocumentStep) => $document,
 									[],
 								),
 							},
@@ -174,30 +171,18 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 					)
 
 					const polymorphism = EXPORTABLE(
-						(pgPolymorphic, matchers) => ($document: PgSelectSingleStep) =>
+						(pgPolymorphic, matchers) => ($document: DocumentStep) =>
 							pgPolymorphic($document, $document.get("type"), matchers),
 						[pgPolymorphic, matchers],
 					)
 
 					const flds: GraphQLFieldConfigMap<unknown, unknown> = {}
 					for (const type of build.input.config.types) {
-						const typeName = type.names.graphql.type
-						if (!typeName) {
-							throw new Error(`No type name set for type ${type.name}`)
-						}
-
-						const singular = type.names.graphql.singular
-						if (!singular) {
-							throw new Error(`No singular name set for type ${type.name}`)
-						}
-
-						const plural = type.names.graphql.plural
-						if (!plural) {
-							throw new Error(`No plural name set for type ${type.name}`)
-						}
+						const { type: typeName, singular, plural } = type.names.graphql
 
 						flds[singular] = context.fieldWithHooks({ fieldName: singular }, () => ({
 							name: singular,
+							description: `Get a single ${singular}.`,
 							type: build.getOutputTypeByName(typeName),
 							args: {
 								id: {
@@ -206,24 +191,21 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 								// TODO: by uniques
 								// TODO: by filters
 							},
-							description: `Get a single ${singular}.`,
+							plan: EXPORTABLE(
+								(registry, decode, constant, type) =>
+									(_: unknown, args: FieldArgs) => {
+										// TODO: filter by uniques
+										const $id = args.getRaw("id")
+										return registry.pgResources.document.get({
+											uid: decode($id),
+											type: constant(type.name),
+										})
+									},
+								[build.input.pgRegistry, decode, constant, type],
+							),
 							extensions: {
 								directives: {
 									oneOf: {},
-								},
-								grafast: {
-									plan: EXPORTABLE(
-										(pgRegistry, decode) =>
-											(_, { $id }) => {
-												if (!$id) {
-													throw new Error("Not enough arguments")
-												}
-
-												const $uid = decode($id)
-												return pgRegistry.pgResources.document.get({ uid: $uid })
-											},
-										[build.input.pgRegistry, decode],
-									),
 								},
 							},
 						}))
@@ -234,18 +216,12 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 							name: plural,
 							description: `Get ${plural} based on the provided filters.`,
 							type: new GraphQLNonNull(connectionType),
-							extensions: {
-								grafast: {
-									plan: EXPORTABLE(
-										(type, pgRegistry, connection) => (_) => {
-											return connection(
-												pgRegistry.pgResources.document.find({ type }),
-											)
-										},
-										[type.name, build.input.pgRegistry, connection],
-									),
+							plan: EXPORTABLE(
+								(type, pgRegistry, connection) => () => {
+									return connection(pgRegistry.pgResources.document.find({ type }))
 								},
-							},
+								[type.name, build.input.pgRegistry, connection],
+							),
 						}))
 					}
 
@@ -263,24 +239,20 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 										description: "The ID of the document",
 									},
 								},
-								extensions: {
-									grafast: {
-										plan: EXPORTABLE(
-											(decode, registry, polymorphism) =>
-												function (_, { $id }) {
-													if (!$id) {
-														throw new Error("No id passed")
-													}
-													const $uid = decode($id!)
-													const $document = registry.pgResources.document.get({
-														uid: $uid,
-													})
-													return polymorphism($document)
-												},
-											[decode, build.input.pgRegistry, polymorphism],
-										),
-									},
-								},
+								plan: EXPORTABLE(
+									(decode, registry, polymorphism) =>
+										function (_, { $id }) {
+											if (!$id) {
+												throw new Error("No id passed")
+											}
+											const $uid = decode($id!)
+											const $document = registry.pgResources.document.get({
+												uid: $uid,
+											})
+											return polymorphism($document)
+										},
+									[decode, build.input.pgRegistry, polymorphism],
+								),
 							})),
 							documents: context.fieldWithHooks({ fieldName: "documents" }, () => ({
 								name: "documents",
@@ -288,22 +260,42 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 								description: "Get a list of documents",
 								args: {
 									// TODO: add filters
-								},
-								extensions: {
-									grafast: {
-										plan: EXPORTABLE(
-											(registry, connection, polymorphism) =>
-												function () {
-													// TODO: use filters from args
-													// TODO: use pagination and edges/node
-
-													const $documents = registry.pgResources.document.find()
-													return connection($documents, polymorphism)
-												},
-											[build.input.pgRegistry, connection, polymorphism],
-										),
+									first: {
+										type: GraphQLInt,
+										applyPlan(_, $documents: DocumentsStep, arg) {
+											$documents.setFirst(arg.getRaw())
+										},
+									},
+									last: {
+										type: GraphQLInt,
+										applyPlan(_, $documents: DocumentsStep, arg) {
+											$documents.setLast(arg.getRaw())
+										},
+									},
+									after: {
+										type: GraphQLString,
+										applyPlan(_, $documents: DocumentsStep, arg) {
+											$documents.setAfter(arg.getRaw())
+										},
+									},
+									before: {
+										type: GraphQLString,
+										applyPlan(_, $documents: DocumentsStep, arg) {
+											$documents.setBefore(arg.getRaw())
+										},
 									},
 								},
+								plan: EXPORTABLE(
+									(registry, connection, polymorphism) =>
+										function () {
+											// TODO: use filters from args
+											// TODO: use pagination and edges/node
+
+											const $documents = registry.pgResources.document.find()
+											return connection($documents, { nodePlan: polymorphism })
+										},
+									[build.input.pgRegistry, connection, polymorphism],
+								),
 							})),
 						},
 						"Add document and documents to Query",
@@ -314,7 +306,7 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 				const typename = context.Self.extensions.insane?.type?.name
 
 				if (typename) {
-					const flds: GraphQLFieldConfigMap<unknown, unknown> = {}
+					const flds: GraphileBuild.GrafastFieldConfigMap<DocumentStep> = {}
 					const type = build.input.config.types.find(
 						(type) => type.name === typename,
 					)
@@ -327,11 +319,7 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 							type: graphQLType(build, field),
 							description: field.description,
 							deprecationReason: field.deprecated,
-							extensions: {
-								grafast: {
-									plan: getter(TYPES.jsonb, field.name),
-								},
-							},
+							plan: getter(TYPES.jsonb, field.name),
 						}
 					}
 
