@@ -1,11 +1,15 @@
 import type { InsaneField } from "./define-field"
 import { camelize, capitalize, classify, humanize, pluralize } from "./util"
 
-export type InsaneTypeDefinition = {
+type FieldName<Fields extends InsaneField<string>[]> = Fields[number]["name"]
+
+export type InsaneTypeDefinition<Fields extends InsaneField<string>[]> = {
 	name: string
 	title?: string | undefined
 	deprecated?: string | undefined
 	description?: string | undefined
+
+	fields: Fields
 
 	names?: {
 		display?: {
@@ -17,16 +21,25 @@ export type InsaneTypeDefinition = {
 			type?: string
 		}
 	}
-
-	fields: InsaneField[]
+	uniques?: {
+		[name: string]: FieldName<Fields>[] | FieldName<Fields>
+	}
 	validate?: (value: unknown) => string | null
 }
 
-export type InsaneType = {
+export type InsaneType<
+	Fields extends InsaneField<string>[] = InsaneField<string>[],
+> = {
 	name: string
 	title: string
 	deprecated: string | null
 	description: string | null
+
+	fields: Fields
+	validate: (value: unknown) => string | null
+	uniques: {
+		[name: string]: FieldName<Fields>[]
+	}
 
 	names: {
 		display: {
@@ -39,12 +52,11 @@ export type InsaneType = {
 			type: string
 		}
 	}
-
-	fields: InsaneField[]
-	validate: (value: unknown) => string | null
 }
 
-export function defineType(defn: InsaneTypeDefinition): InsaneType {
+export function defineType<const Fields extends InsaneField<string>[]>(
+	defn: InsaneTypeDefinition<Fields>,
+): InsaneType<Fields> {
 	const {
 		name,
 		title = capitalize(humanize(name)),
@@ -52,6 +64,7 @@ export function defineType(defn: InsaneTypeDefinition): InsaneType {
 		validate = () => null,
 		deprecated = null,
 		description = null,
+		uniques = {},
 	} = defn
 
 	return {
@@ -74,6 +87,12 @@ export function defineType(defn: InsaneTypeDefinition): InsaneType {
 			},
 		},
 		validate,
+		uniques: Object.fromEntries(
+			Object.entries(uniques).map(([key, value]) => [
+				key,
+				Array.isArray(value) ? value : [value],
+			]),
+		),
 	}
 }
 
