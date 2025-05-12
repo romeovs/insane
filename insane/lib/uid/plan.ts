@@ -57,6 +57,9 @@ class EncodeUIDStep extends ExecutableStep<string> {
 	}
 
 	unbatchedExecute(_: unknown, encoding: UidEncoder, uid: string) {
+		if (typeof uid !== "string") {
+			return uid
+		}
 		return encoding.encode(uid)
 	}
 }
@@ -78,6 +81,9 @@ class DecodeUIDStep extends UnbatchedExecutableStep<string> {
 	}
 
 	unbatchedExecute(_: unknown, encoding: UidEncoder, id: string): string {
+		if (typeof id !== "string") {
+			return id
+		}
 		return encoding.decode(id).toString()
 	}
 }
