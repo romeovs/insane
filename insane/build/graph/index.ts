@@ -34,6 +34,7 @@ import { ScalarsPlugin } from "./plugins/scalars"
 import { StatusPlugin } from "./plugins/status"
 import { TotalCountPlugin } from "./plugins/total-count"
 import { TypeEnumPlugin } from "./plugins/type"
+import { UniquesPlugin } from "./plugins/uniques"
 import { UserPlugin } from "./plugins/user"
 
 // Hack until graphile-build exports ConnectionPlugin
@@ -74,6 +75,7 @@ export async function build(config: ValidInsaneConfig) {
 					UserPlugin,
 					TypeEnumPlugin,
 					DocumentPlugin,
+					UniquesPlugin,
 					TotalCountPlugin,
 					RemoveEmptyDirectivesPlugin,
 				],

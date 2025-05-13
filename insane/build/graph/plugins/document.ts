@@ -7,19 +7,13 @@ import {
 	pgPolymorphic,
 } from "@dataplan/pg"
 import {
-	type FieldArg,
 	type GrafastFieldConfigArgumentMap,
-	bakedInput,
 	connection,
 	constant,
 	lambda,
 } from "grafast"
 import { EXPORTABLE } from "graphile-utils"
-import type {
-	GraphQLFieldConfigMap,
-	GraphQLInputType,
-	GraphQLOutputType,
-} from "graphql"
+import type { GraphQLFieldConfigMap, GraphQLOutputType } from "graphql"
 import { sql } from "pg-sql2"
 
 import { decode, encode } from "~/lib/uid/plan"
@@ -28,8 +22,8 @@ import { version } from "~/lib/version"
 type DocumentResource =
 	GraphileBuild.Build["input"]["pgRegistry"]["pgResources"]["document"]
 
-type DocumentStep = PgSelectSingleStep<DocumentResource>
-type DocumentsStep = PgSelectStep<DocumentResource>
+export type DocumentStep = PgSelectSingleStep<DocumentResource>
+export type DocumentsStep = PgSelectStep<DocumentResource>
 
 export const DocumentPlugin: GraphileConfig.Plugin = {
 	name: "DocumentPlugin",
@@ -154,36 +148,6 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 						typeName: type.names.graphql.type,
 						nonNullNode: true,
 					})
-
-					for (const name in type.uniques) {
-						const unique = type.uniques[name]!
-
-						const fields = {}
-						for (const fieldName of unique) {
-							const field = type.fields.find((field) => field.name === fieldName)
-							if (!field) {
-								throw new Error(`no field ${fieldName} in ${type.name}`)
-							}
-							fields[field.name] = {
-								type: graphQLInputType(build, field),
-							}
-						}
-
-						const size = Object.keys(fields).length
-						if (size === 1) {
-							// nothing to do, we can just use the literal type
-							// TODO: should we make sure it's a literal type?
-						} else {
-							build.registerInputObjectType(
-								`${type.names.graphql.type}${name}Input`,
-								{},
-								() => ({
-									fields,
-								}),
-								`Add input type for ${name}`,
-							)
-						}
-					}
 				}
 
 				return _
@@ -243,89 +207,6 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 							},
 						}
 
-						// Add uniques
-						for (const name in type.uniques) {
-							const unique = type.uniques[name]!
-
-							const types = unique.map(function (fieldName) {
-								const field = type.fields.find((field) => field.name === fieldName)
-								if (!field) {
-									throw new Error(`no field ${fieldName} in ${type.name}`)
-								}
-								return graphQLInputType(build, field)
-							})
-
-							if (types.length === 1) {
-								const fieldName = unique[0]
-								const fieldType = types[0]
-								if (!fieldName || !fieldType) {
-									throw new Error(`missing field ${unique[0]} in ${type.name}`)
-								}
-
-								args[name] = {
-									type: fieldType,
-									applyPlan: EXPORTABLE(
-										(fieldName, sql, lambda) =>
-											(_: unknown, $document: DocumentStep, arg: FieldArg) => {
-												const $condition = lambda(
-													arg.getRaw(),
-													(value): PgSelectQueryBuilderCallback =>
-														function (qb) {
-															if (value === undefined) {
-																return
-															}
-															// TODO: do not cast to text
-															qb.where(
-																sql`${qb.alias}.data->${sql.literal(fieldName)} = jsonb(${sql.value(JSON.stringify(value))}::text)`,
-															)
-														},
-												)
-												$document.getClassStep().apply($condition)
-											},
-										[fieldName, sql, lambda],
-									),
-								}
-							} else {
-								const type = build.getInputTypeByName(`${typeName}${name}Input`)
-								args[name] = {
-									type,
-									applyPlan: EXPORTABLE(
-										(fieldNames, sql, lambda, bakedInput) =>
-											(_: unknown, $document: DocumentStep, arg: FieldArg) => {
-												const value = arg.getRaw()
-												const inputs = fieldNames.map((fieldName) =>
-													bakedInput(arg.typeAt(fieldName), arg.getRaw(fieldName)),
-												)
-
-												const $conditions = lambda(
-													[value, ...inputs],
-													([arg, ...values]): PgSelectQueryBuilderCallback =>
-														function (qb) {
-															if (arg === undefined) {
-																return
-															}
-															values.forEach((value, idx) => {
-																const fieldName = fieldNames[idx]!
-																if (value === undefined) {
-																	qb.where(
-																		sql`${qb.alias}.data->${sql.literal(fieldName)} is null`,
-																	)
-																} else {
-																	qb.where(
-																		sql`${qb.alias}.data->${sql.literal(fieldName)} = jsonb(${sql.value(JSON.stringify(value))}::text)`,
-																	)
-																}
-															})
-														},
-												)
-												$document.getClassStep().apply($conditions)
-											},
-										[unique, sql, lambda, bakedInput],
-									),
-								}
-							}
-						}
-
 						flds[singular] = context.fieldWithHooks({ fieldName: singular }, () => ({
 							name: singular,
 							description: `Get a single ${singular}.`,
@@ -344,6 +225,9 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 							extensions: {
 								directives: {
 									oneOf: {},
+								},
+								insane: {
+									type: type.name,
 								},
 							},
 						}))
@@ -480,13 +364,14 @@ function graphQLType(
 	build: GraphileBuild.Build,
 	{ type, required }: { type: string; required?: boolean },
 ): GraphQLOutputType {
-	const { GraphQLNonNull } = build.graphql
+	const { GraphQLNonNull, GraphQLString, GraphQLInt, GraphQLBoolean, GraphQLFloat } =
+		build.graphql
+
 	if (required) {
 		const typ = graphQLType(build, { type, required: false })
 		return new GraphQLNonNull(typ)
 	}
 
-	const { GraphQLString, GraphQLInt, GraphQLBoolean, GraphQLFloat } = build.graphql
 	switch (type) {
 		case "string":
 			return GraphQLString
@@ -501,31 +386,6 @@ function graphQLType(
 	const found = build.input.config.types.find((t) => t.name === type)
 	if (found) {
 		return build.getObjectTypeByName(found.names.graphql.type)
-	}
-
-	throw new Error(`Unsupported type ${type}`)
-}
-
-function graphQLInputType(
-	build: GraphileBuild.Build,
-	{ type, required }: { type: string; required?: boolean },
-): GraphQLInputType {
-	const { GraphQLNonNull } = build.graphql
-	if (required) {
-		const typ = graphQLInputType(build, { type, required: false })
-		return new GraphQLNonNull(typ)
-	}
-
-	const { GraphQLString, GraphQLInt, GraphQLBoolean, GraphQLFloat } = build.graphql
-	switch (type) {
-		case "string":
-			return GraphQLString
-		case "integer":
-			return GraphQLInt
-		case "float":
-			return GraphQLFloat
-		case "boolean":
-			return GraphQLBoolean
 	}
 
 	throw new Error(`Unsupported type ${type}`)
