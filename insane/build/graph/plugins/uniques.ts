@@ -98,7 +98,7 @@ export const UniquesPlugin: GraphileConfig.Plugin = {
 																return
 															}
 															qb.where(
-																sql`${qb.alias}.data->${sql.literal(fieldName)} = jsonb(${sql.value(JSON.stringify(value))}::text)`,
+																sql`${qb.alias}.data->>${sql.literal(fieldName)} = ${sql.value(value)}`,
 															)
 														},
 												)
@@ -129,11 +129,11 @@ export const UniquesPlugin: GraphileConfig.Plugin = {
 																const fieldName = fieldNames[idx]!
 																if (value === undefined) {
 																	qb.where(
-																		sql`${qb.alias}.data->${sql.literal(fieldName)} is null`,
+																		sql`${qb.alias}.data->>${sql.literal(fieldName)} is null`,
 																	)
 																} else {
 																	qb.where(
-																		sql`${qb.alias}.data->${sql.literal(fieldName)} = jsonb(${sql.value(JSON.stringify(value))}::text)`,
+																		sql`${qb.alias}.data->>${sql.literal(fieldName)} = ${sql.value(value)}`,
 																	)
 																}
 															})
@@ -144,9 +144,8 @@ export const UniquesPlugin: GraphileConfig.Plugin = {
 										[unique, sql, lambda, bakedInput],
 									),
 								}
-
-								return build.extend(args, extended, `Add uniques for ${type.name}`)
 							}
+							return build.extend(args, extended, `Add uniques for ${type.name}`)
 						}
 					}
 				}
