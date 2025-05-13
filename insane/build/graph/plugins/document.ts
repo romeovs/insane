@@ -312,9 +312,6 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 								plan: EXPORTABLE(
 									(registry, connection, polymorphism) =>
 										function () {
-											// TODO: use filters from args
-											// TODO: use pagination and edges/node
-
 											const $documents = registry.pgResources.document.find()
 											return connection($documents, { nodePlan: polymorphism })
 										},
