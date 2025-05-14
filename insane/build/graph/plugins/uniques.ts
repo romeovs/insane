@@ -3,7 +3,6 @@ import {
 	type FieldArg,
 	type GrafastFieldConfigArgumentMap,
 	type GrafastInputFieldConfigMap,
-	bakedInput,
 	lambda,
 } from "grafast"
 import { EXPORTABLE } from "graphile-utils"
@@ -15,6 +14,7 @@ import type { InsaneType } from "~/lib/schema"
 import { version } from "~/lib/version"
 
 import type { DocumentStep } from "./document"
+import { field } from "./util"
 
 export const UniquesPlugin: GraphileConfig.Plugin = {
 	name: "UniquesPlugin",
@@ -88,23 +88,23 @@ export const UniquesPlugin: GraphileConfig.Plugin = {
 								extended[name] = {
 									type: fieldType,
 									applyPlan: EXPORTABLE(
-										(fieldName, sql, lambda) =>
+										(fieldName, sql, lambda, field) =>
 											(_: unknown, $document: DocumentStep, arg: FieldArg) => {
 												const $condition = lambda(
 													arg.getRaw(),
 													(value): PgSelectQueryBuilderCallback =>
 														function (qb) {
-															if (value === undefined) {
+															if (value === undefined || value === null) {
 																return
 															}
 															qb.where(
-																sql`${qb.alias}.data->>${sql.literal(fieldName)} = ${sql.value(value)}`,
+																sql`${field(qb, fieldName)} = ${sql.value(value)}`,
 															)
 														},
 												)
 												$document.getClassStep().apply($condition)
 											},
-										[fieldName, sql, lambda],
+										[fieldName, sql, lambda, field],
 									),
 								}
 							} else {
@@ -112,40 +112,34 @@ export const UniquesPlugin: GraphileConfig.Plugin = {
 								extended[name] = {
 									type: inputType,
 									applyPlan: EXPORTABLE(
-										(fieldNames, sql, lambda, bakedInput) =>
+										(fieldNames, sql, lambda, field) =>
 											(_: unknown, $document: DocumentStep, arg: FieldArg) => {
-												const value = arg.getRaw()
-												const inputs = fieldNames.map((fieldName) =>
-													bakedInput(arg.typeAt(fieldName), arg.getRaw(fieldName)),
-												)
 												const $conditions = lambda(
-													[value, ...inputs],
-													([arg, ...values]): PgSelectQueryBuilderCallback =>
+													arg.getRaw(),
+													(value): PgSelectQueryBuilderCallback =>
 														function (qb) {
-															if (arg === undefined) {
+															if (value === undefined) {
 																return
 															}
-															values.forEach((value, idx) => {
-																const fieldName = fieldNames[idx]!
-																if (value === undefined) {
-																	qb.where(
-																		sql`${qb.alias}.data->>${sql.literal(fieldName)} is null`,
-																	)
+															for (const fieldName of fieldNames) {
+																const val = value[fieldName]
+																if (val === undefined || val === null) {
+																	qb.where(sql`${field(qb, fieldName)} is null`)
 																} else {
 																	qb.where(
-																		sql`${qb.alias}.data->>${sql.literal(fieldName)} = ${sql.value(value)}`,
+																		sql`${field(qb, fieldName)} = ${sql.value(val)}`,
 																	)
 																}
-															})
+															}
 														},
 												)
 												$document.getClassStep().apply($conditions)
 											},
-										[unique, sql, lambda, bakedInput],
+										[unique, sql, lambda, field],
 									),
 								}
+								return build.extend(args, extended, `Add uniques for ${type.name}`)
 							}
-							return build.extend(args, extended, `Add uniques for ${type.name}`)
 						}
 					}
 				}
