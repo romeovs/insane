@@ -1,14 +1,18 @@
 import {
 	type AccessStep,
-	ExecutableStep,
+	type ExecutableStep,
 	UnbatchedExecutableStep,
 	context,
 } from "grafast"
 
 import type { UidEncoder } from "./encoder"
 
-type Context = {
-	encoding: UidEncoder
+declare global {
+	namespace Grafast {
+		interface Context {
+			encoding: UidEncoder
+		}
+	}
 }
 
 /**
@@ -18,7 +22,7 @@ type Context = {
  * and returns a string.
  */
 export function decode($uid: ExecutableStep) {
-	const $encoding = context<Context>().get("encoding")
+	const $encoding = context().get("encoding")
 	return new DecodeUIDStep($encoding, $uid)
 }
 
@@ -31,7 +35,7 @@ decode.$$export = {
  * Encode a uid as a string.
  */
 export function encode($id: ExecutableStep<string>) {
-	const $encoding = context<Context>().get("encoding")
+	const $encoding = context().get("encoding")
 	return new EncodeUIDStep($encoding, $id)
 }
 
@@ -40,7 +44,7 @@ encode.$$export = {
 	exportName: "encode",
 }
 
-class EncodeUIDStep extends ExecutableStep<string> {
+class EncodeUIDStep extends UnbatchedExecutableStep<string> {
 	isSyncAndSafe = true
 
 	constructor($encoding: AccessStep<UidEncoder>, $uid: ExecutableStep) {
