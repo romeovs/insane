@@ -1,5 +1,6 @@
 import {
 	type PgCodec,
+	type PgSelectParsedCursorStep,
 	type PgSelectQueryBuilderCallback,
 	type PgSelectSingleStep,
 	type PgSelectStep,
@@ -7,6 +8,7 @@ import {
 	pgPolymorphic,
 } from "@dataplan/pg"
 import {
+	type ConnectionStep,
 	type GrafastFieldConfigArgumentMap,
 	connection,
 	constant,
@@ -23,7 +25,12 @@ type DocumentResource =
 	GraphileBuild.Build["input"]["pgRegistry"]["pgResources"]["document"]
 
 export type DocumentStep = PgSelectSingleStep<DocumentResource>
-export type DocumentsStep = PgSelectStep<DocumentResource>
+export type DocumentsStep = ConnectionStep<
+	PgSelectSingleStep<DocumentResource>,
+	PgSelectParsedCursorStep,
+	PgSelectStep<DocumentResource>,
+	PgSelectSingleStep<DocumentResource>
+>
 
 export const DocumentPlugin: GraphileConfig.Plugin = {
 	name: "DocumentPlugin",
