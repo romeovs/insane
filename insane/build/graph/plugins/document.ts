@@ -10,9 +10,14 @@ import {
 import {
 	type ConnectionStep,
 	type GrafastFieldConfigArgumentMap,
+	applyTransforms,
 	connection,
 	constant,
+	context as context_,
+	each,
 	lambda,
+	object,
+	sideEffect,
 } from "grafast"
 import { EXPORTABLE } from "graphile-utils"
 import type { GraphQLFieldConfigMap, GraphQLOutputType } from "graphql"
@@ -32,6 +37,14 @@ export type DocumentsStep = ConnectionStep<
 	PgSelectStep<DocumentResource>,
 	PgSelectSingleStep<DocumentResource>
 >
+
+declare global {
+	namespace Grafast {
+		interface Context {
+			items: Set<string>
+		}
+	}
+}
 
 export const DocumentPlugin: GraphileConfig.Plugin = {
 	name: "DocumentPlugin",
@@ -221,14 +234,16 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 							type: build.getOutputTypeByName(typeName),
 							args,
 							plan: EXPORTABLE(
-								(registry, constant, type) => () => {
-									return registry.pgResources.document
+								(registry, constant, type, track) => () => {
+									const $document = registry.pgResources.document
 										.find({
 											type: constant(type.name),
 										})
 										.single()
+									track($document)
+									return $document
 								},
-								[build.input.pgRegistry, constant, type],
+								[build.input.pgRegistry, constant, type, track],
 							),
 							extensions: {
 								directives: {
@@ -249,10 +264,19 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 							description: `Get ${plural} based on the provided filters.`,
 							type: new GraphQLNonNull(connectionType),
 							plan: EXPORTABLE(
-								(type, pgRegistry, connection) => () => {
-									return connection(pgRegistry.pgResources.document.find({ type }))
+								(type, pgRegistry, connection, trackList, trackEach) => () => {
+									const $documents = pgRegistry.pgResources.document.find({ type })
+									trackList(type)
+									trackEach($documents)
+									return connection($documents)
 								},
-								[type.name, build.input.pgRegistry, connection],
+								[
+									type.name,
+									build.input.pgRegistry,
+									connection,
+									trackList,
+									trackEach,
+								],
 							),
 						}))
 					}
@@ -272,7 +296,7 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 									},
 								},
 								plan: EXPORTABLE(
-									(decode, registry) =>
+									(decode, registry, track) =>
 										function (_, { $id }) {
 											if (!$id) {
 												throw new Error("No id passed")
@@ -281,9 +305,10 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 											const $document = registry.pgResources.document.get({
 												uid: $uid,
 											})
+											track($document)
 											return $document
 										},
-									[decode, build.input.pgRegistry],
+									[decode, build.input.pgRegistry, track],
 								),
 							})),
 							documents: context.fieldWithHooks({ fieldName: "documents" }, () => ({
@@ -318,12 +343,20 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 									},
 								},
 								plan: EXPORTABLE(
-									(registry, connection, polymorphism) =>
+									(registry, connection, polymorphism, trackList, trackEach) =>
 										function () {
 											const $documents = registry.pgResources.document.find()
+											trackList("*")
+											trackEach($documents)
 											return connection($documents, { nodePlan: polymorphism })
 										},
-									[build.input.pgRegistry, connection, polymorphism],
+									[
+										build.input.pgRegistry,
+										connection,
+										polymorphism,
+										trackList,
+										trackEach,
+									],
 								),
 							})),
 						},
@@ -354,17 +387,26 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 
 						if (isReferenceType(field.type)) {
 							defn.plan = EXPORTABLE(
-								(fieldName, refType, constant, pgRegistry, TYPES, sql) =>
+								(fieldName, refType, constant, pgRegistry, TYPES, sql, track) =>
 									($doc: DocumentStep) => {
-										// TODO: handle many step
+										// TODO: handle many reference
+										// TODO: also add list tag when it's a many reference
+
 										const alias = $doc.getClassStep().alias
-										return pgRegistry.pgResources.document.get({
+										const $id = $doc.select(
+											sql`(${alias}.data->${sql.literal(fieldName)}->'ref')::bigint`,
+											TYPES.bigint,
+										)
+
+										const $ref = pgRegistry.pgResources.document.get({
 											type: constant(refType as string),
-											uid: $doc.select(
-												sql`(${alias}.data->${sql.literal(fieldName)}->'ref')::bigint`,
-												TYPES.bigint,
-											),
+											uid: $id,
 										})
+
+										track($doc)
+										track($ref)
+
+										return $ref
 									},
 								[
 									field.name,
@@ -373,10 +415,18 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 									build.input.pgRegistry,
 									TYPES,
 									sql,
+									track,
 								],
 							)
 						} else {
-							defn.plan = getter(TYPES.jsonb, field.name)
+							const get = getter(TYPES.jsonb, field.name)
+							defn.plan = EXPORTABLE(
+								(get, track) => ($doc: DocumentStep) => {
+									track($doc)
+									return get($doc)
+								},
+								[get, track],
+							)
 						}
 					}
 
@@ -388,6 +438,63 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 		},
 	},
 }
+
+const id = EXPORTABLE(
+	(encode) =>
+		function ($document: DocumentStep) {
+			return encode($document.get("uid"))
+		},
+	[encode],
+)
+
+const track = EXPORTABLE(
+	(context, sideEffect, id) => ($document: DocumentStep) => {
+		const $items = context().get("items")
+		const $type = $document.get("type")
+		const $id = id($document)
+
+		sideEffect([$items, $type, $id], ([items, type, id]) => {
+			if (type && id) {
+				items?.add(`${type}:${id}`)
+			}
+		})
+	},
+	[context_, sideEffect, id],
+)
+
+const trackEach = EXPORTABLE(
+	(context, sideEffect, applyTransforms, each, object, id) =>
+		($documents: PgSelectStep) => {
+			const $items = context().get("items")
+			const $info = applyTransforms(
+				each($documents, ($document) =>
+					object({
+						type: $document.get("type"),
+						id: id($document),
+					}),
+				),
+			)
+
+			sideEffect([$items, $info], ([items, info]) => {
+				for (const { type, id } of info) {
+					items?.add(`${type}:${id}`)
+				}
+			})
+		},
+	[context_, sideEffect, applyTransforms, each, object, id],
+)
+
+const trackList = EXPORTABLE(
+	(sideEffect, context) => (type: string) => {
+		const $items = context().get("items")
+		sideEffect([$items], ([items]) => {
+			if (items) {
+				items.add(type)
+			}
+		})
+	},
+	[sideEffect, context_],
+)
 
 function isReferenceType(
 	type: InsaneTypeReference,
@@ -433,14 +540,6 @@ function graphQLType(
 
 	throw new Error(`Unsupported type ${type}`)
 }
-
-const id = EXPORTABLE(
-	(encode) =>
-		function ($document: DocumentStep) {
-			return encode($document.get("uid"))
-		},
-	[encode],
-)
 
 function getter(type: PgCodec, ...path: (string | number)[]) {
 	if (path.length === 0) {
