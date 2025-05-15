@@ -18,6 +18,7 @@ import { EXPORTABLE } from "graphile-utils"
 import type { GraphQLFieldConfigMap, GraphQLOutputType } from "graphql"
 import { sql } from "pg-sql2"
 
+import type { InsaneTypeReference } from "~/lib/schema"
 import { decode, encode } from "~/lib/uid/plan"
 import { version } from "~/lib/version"
 
@@ -162,32 +163,32 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 			GraphQLObjectType_fields(fields, build, context) {
 				const { GraphQLString, GraphQLInt } = build.graphql
 
+				const matchers = Object.fromEntries(
+					build.input.config.types.map((type) => [
+						type.names.graphql.type,
+						{
+							match: EXPORTABLE(
+								(name) => (specifier: string) => {
+									return specifier === name
+								},
+								[type.name],
+							),
+							plan: EXPORTABLE(
+								() => (_: unknown, $document: DocumentStep) => $document,
+								[],
+							),
+						},
+					]),
+				)
+
+				const polymorphism = EXPORTABLE(
+					(pgPolymorphic, matchers) => ($document: DocumentStep) =>
+						pgPolymorphic($document, $document.get("type"), matchers),
+					[pgPolymorphic, matchers],
+				)
+
 				if (context.Self.name === "Query") {
 					const { GraphQLID, GraphQLNonNull } = build.graphql
-
-					const matchers = Object.fromEntries(
-						build.input.config.types.map((type) => [
-							type.names.graphql.type,
-							{
-								match: EXPORTABLE(
-									(name) => (specifier: string) => {
-										return specifier === name
-									},
-									[type.name],
-								),
-								plan: EXPORTABLE(
-									() => (_: unknown, $document: DocumentStep) => $document,
-									[],
-								),
-							},
-						]),
-					)
-
-					const polymorphism = EXPORTABLE(
-						(pgPolymorphic, matchers) => ($document: DocumentStep) =>
-							pgPolymorphic($document, $document.get("type"), matchers),
-						[pgPolymorphic, matchers],
-					)
 
 					const flds: GraphQLFieldConfigMap<unknown, unknown> = {}
 					for (const type of build.input.config.types) {
@@ -271,7 +272,7 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 									},
 								},
 								plan: EXPORTABLE(
-									(decode, registry, polymorphism) =>
+									(decode, registry) =>
 										function (_, { $id }) {
 											if (!$id) {
 												throw new Error("No id passed")
@@ -280,9 +281,9 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 											const $document = registry.pgResources.document.get({
 												uid: $uid,
 											})
-											return polymorphism($document)
+											return $document
 										},
-									[decode, build.input.pgRegistry, polymorphism],
+									[decode, build.input.pgRegistry],
 								),
 							})),
 							documents: context.fieldWithHooks({ fieldName: "documents" }, () => ({
@@ -343,11 +344,39 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 					}
 
 					for (const field of type.fields) {
-						flds[field.name] = {
+						const defn = {
 							type: graphQLType(build, field),
 							description: field.description,
 							deprecationReason: field.deprecated,
 							plan: getter(TYPES.jsonb, field.name),
+						}
+						flds[field.name] = defn
+
+						if (isReferenceType(field.type)) {
+							defn.plan = EXPORTABLE(
+								(fieldName, refType, constant, pgRegistry, TYPES, sql) =>
+									($doc: DocumentStep) => {
+										// TODO: handle many step
+										const alias = $doc.getClassStep().alias
+										return pgRegistry.pgResources.document.get({
+											type: constant(refType as string),
+											uid: $doc.select(
+												sql`(${alias}.data->${sql.literal(fieldName)}->'ref')::bigint`,
+												TYPES.bigint,
+											),
+										})
+									},
+								[
+									field.name,
+									field.type.ref,
+									constant,
+									build.input.pgRegistry,
+									TYPES,
+									sql,
+								],
+							)
+						} else {
+							defn.plan = getter(TYPES.jsonb, field.name)
 						}
 					}
 
@@ -360,13 +389,19 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 	},
 }
 
+function isReferenceType(
+	type: InsaneTypeReference,
+): type is { ref: InsaneTypeReference } {
+	return typeof type === "object" && "ref" in type
+}
+
 type Directives = {
 	[name: string]: unknown
 }
 
 function graphQLType(
 	build: GraphileBuild.Build,
-	{ type, required }: { type: string; required?: boolean },
+	{ type, required }: { type: InsaneTypeReference; required?: boolean },
 ): GraphQLOutputType {
 	const { GraphQLNonNull, GraphQLString, GraphQLInt, GraphQLBoolean, GraphQLFloat } =
 		build.graphql
@@ -374,6 +409,10 @@ function graphQLType(
 	if (required) {
 		const typ = graphQLType(build, { type, required: false })
 		return new GraphQLNonNull(typ)
+	}
+
+	if (isReferenceType(type)) {
+		return graphQLType(build, { type: type.ref, required })
 	}
 
 	switch (type) {
@@ -397,7 +436,7 @@ function graphQLType(
 
 const id = EXPORTABLE(
 	(encode) =>
-		function ($document: PgSelectSingleStep) {
+		function ($document: DocumentStep) {
 			return encode($document.get("uid"))
 		},
 	[encode],
@@ -411,20 +450,20 @@ function getter(type: PgCodec, ...path: (string | number)[]) {
 	if (path.length === 1) {
 		const key = path[0]!.toString()
 		return EXPORTABLE(
-			(type, sql, key) =>
-				function ($document: PgSelectSingleStep) {
-					return $document.select(sql`data->${sql.literal(key)}`, type)
-				},
+			(type, sql, key) => ($document: DocumentStep) => {
+				const alias = $document.getClassStep().alias
+				return $document.select(sql`${alias}.data->${sql.literal(key)}`, type)
+			},
 			[type, sql, key],
 		)
 	}
 
 	const pth = path.map((el) => JSON.stringify(el)).join(",")
 	return EXPORTABLE(
-		(type, sql, pth) =>
-			function ($document: PgSelectSingleStep) {
-				return $document.select(sql`data #> '{${sql.raw(pth)}}'`, type)
-			},
+		(type, sql, pth) => ($document: DocumentStep) => {
+			const alias = $document.getClassStep().alias
+			return $document.select(sql`${alias}.data #> '{${sql.raw(pth)}}'`, type)
+		},
 		[type, sql, pth],
 	)
 }
