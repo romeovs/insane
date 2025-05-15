@@ -1,8 +1,8 @@
-import type { InsaneDataType } from "./registry"
+export type InsaneTypeReference = string | { ref: InsaneTypeReference }
 
 export type InsaneFieldDefinition<Name extends string> = {
 	name: Name
-	type: InsaneDataType
+	type: InsaneTypeReference
 	deprecated?: string | undefined | null
 	description?: string | undefined | null
 	required?: boolean | undefined
@@ -10,7 +10,7 @@ export type InsaneFieldDefinition<Name extends string> = {
 
 export type InsaneField<Name extends string = string> = {
 	name: Name
-	type: InsaneDataType
+	type: InsaneTypeReference
 	deprecated: string | null
 	description: string | null
 	required: boolean
