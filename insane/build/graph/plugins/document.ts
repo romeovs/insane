@@ -23,7 +23,12 @@ import { EXPORTABLE } from "graphile-utils"
 import type { GraphQLFieldConfigMap, GraphQLOutputType } from "graphql"
 import { sql } from "pg-sql2"
 
-import type { InsaneTypeReference } from "~/lib/schema"
+import {
+	type InsaneTypeDef,
+	isArrayType,
+	isReferenceType,
+	isUnionType,
+} from "~/lib/schema"
 import { decode, encode } from "~/lib/uid/plan"
 import { version } from "~/lib/version"
 
@@ -386,39 +391,93 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 						flds[field.name] = defn
 
 						if (isReferenceType(field.type)) {
-							defn.plan = EXPORTABLE(
-								(fieldName, refType, constant, pgRegistry, TYPES, sql, track) =>
-									($doc: DocumentStep) => {
-										// TODO: handle many reference
-										// TODO: also add list tag when it's a many reference
+							if (
+								field.type.cardinality === "one-to-many" ||
+								field.type.cardinality === "many-to-many"
+							) {
+								// to-many reference
+								defn.plan = EXPORTABLE(
+									(
+										fieldName,
+										refType,
+										constant,
+										pgRegistry,
+										TYPES,
+										sql,
+										track,
+										trackEach,
+										trackList,
+										connection,
+									) =>
+										($doc: DocumentStep): DocumentsStep => {
+											const $docs = pgRegistry.pgResources.document.find({
+												type: constant(refType.to),
+											})
 
-										const alias = $doc.getClassStep().alias
-										const $id = $doc.select(
-											sql`(${alias}.data->${sql.literal(fieldName)}->'ref')::bigint`,
-											TYPES.bigint,
-										)
+											const alias = $doc.getClassStep().alias
+											const path = `$.${fieldName}[*].ref`
+											const $ids = $doc.select(
+												sql`jsonb_path_query_array(${alias}.data, ${sql.literal(path)})`,
+												TYPES.jsonb,
+											)
+											$docs.where(
+												sql`${$docs.alias}.uid IN (SELECT __id::bigint FROM jsonb_array_elements(${$docs.placeholder($ids, TYPES.jsonb, true)}) as __id)`,
+											)
 
-										const $ref = pgRegistry.pgResources.document.get({
-											type: constant(refType as string),
-											uid: $id,
-										})
+											track($doc)
+											trackEach($docs)
+											trackList(refType.to)
 
-										track($doc)
-										track($ref)
+											return connection($docs)
+										},
+									[
+										field.name,
+										field.type,
+										constant,
+										build.input.pgRegistry,
+										TYPES,
+										sql,
+										track,
+										trackEach,
+										trackList,
+										connection,
+									],
+								)
+							} else {
+								// to-one reference
+								defn.plan = EXPORTABLE(
+									(fieldName, refType, constant, pgRegistry, TYPES, sql, track) =>
+										($doc: DocumentStep): DocumentStep => {
+											// to-one reference
+											const alias = $doc.getClassStep().alias
+											const $id = $doc.select(
+												sql`(${alias}.data->${sql.literal(fieldName)}->'ref')::bigint`,
+												TYPES.bigint,
+											)
 
-										return $ref
-									},
-								[
-									field.name,
-									field.type.ref,
-									constant,
-									build.input.pgRegistry,
-									TYPES,
-									sql,
-									track,
-								],
-							)
+											const $ref = pgRegistry.pgResources.document.get({
+												type: constant(refType.to),
+												uid: $id,
+											})
+
+											track($doc)
+											track($ref)
+
+											return $ref
+										},
+									[
+										field.name,
+										field.type,
+										constant,
+										build.input.pgRegistry,
+										TYPES,
+										sql,
+										track,
+									],
+								)
+							}
 						} else {
+							// simple getter
 							const get = getter(TYPES.jsonb, field.name)
 							defn.plan = EXPORTABLE(
 								(get, track) => ($doc: DocumentStep) => {
@@ -496,22 +555,22 @@ const trackList = EXPORTABLE(
 	[sideEffect, context_],
 )
 
-function isReferenceType(
-	type: InsaneTypeReference,
-): type is { ref: InsaneTypeReference } {
-	return typeof type === "object" && "ref" in type
-}
-
 type Directives = {
 	[name: string]: unknown
 }
 
 function graphQLType(
 	build: GraphileBuild.Build,
-	{ type, required }: { type: InsaneTypeReference; required?: boolean },
+	{ type, required }: { type: InsaneTypeDef; required?: boolean },
 ): GraphQLOutputType {
-	const { GraphQLNonNull, GraphQLString, GraphQLInt, GraphQLBoolean, GraphQLFloat } =
-		build.graphql
+	const {
+		GraphQLNonNull,
+		GraphQLString,
+		GraphQLInt,
+		GraphQLBoolean,
+		GraphQLFloat,
+		GraphQLList,
+	} = build.graphql
 
 	if (required) {
 		const typ = graphQLType(build, { type, required: false })
@@ -519,7 +578,18 @@ function graphQLType(
 	}
 
 	if (isReferenceType(type)) {
-		return graphQLType(build, { type: type.ref, required })
+		if (type.cardinality === "one-to-many" || type.cardinality === "many-to-many") {
+			// TODO use actual type name
+			const refedType = build.input.config.types.find((t) => t.name === type.to)
+			return build.getObjectTypeByName(`${refedType.names.graphql.type}Connection`)
+		}
+		return graphQLType(build, { type: type.to, required })
+	}
+	if (isArrayType(type)) {
+		return new GraphQLList(graphQLType(build, { type: type.of, required }))
+	}
+	if (isUnionType(type)) {
+		throw new Error("Union types are not supported (yet!)")
 	}
 
 	switch (type) {

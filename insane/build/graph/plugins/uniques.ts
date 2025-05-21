@@ -10,7 +10,7 @@ import type { GraphQLInputType } from "graphql"
 import { classify } from "inflection"
 import { sql } from "pg-sql2"
 
-import type { InsaneType } from "~/lib/schema"
+import type { InsaneTypeDef } from "~/lib/schema"
 import { version } from "~/lib/version"
 
 import type { DocumentStep } from "./document"
@@ -175,6 +175,6 @@ function graphQLInputType(
 	throw new Error(`Unsupported type ${type}`)
 }
 
-function inputTypeName(type: InsaneType, name: string) {
+function inputTypeName(type: InsaneTypeDef, name: string) {
 	return `${type.names.graphql.type}${classify(name)}Input`
 }
