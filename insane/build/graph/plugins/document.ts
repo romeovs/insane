@@ -17,6 +17,7 @@ import { isReferenceType } from "~/lib/schema"
 import { decode } from "~/lib/uid/plan"
 import { version } from "~/lib/version"
 
+import type { InsaneType } from "~/dist/config"
 import { track, trackEach, trackList } from "./track"
 import {
 	type Directives,
@@ -27,6 +28,21 @@ import {
 	graphQLType,
 	id,
 } from "./utils"
+
+declare global {
+	namespace GraphileBuild {
+		interface ScopeObject {
+			insane?: {
+				type: InsaneType
+			}
+		}
+		interface ScopeInputObject {
+			insane?: {
+				type: InsaneType
+			}
+		}
+	}
+}
 
 export const DocumentPlugin: GraphileConfig.Plugin = {
 	name: "DocumentPlugin",
@@ -113,7 +129,11 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 
 					build.registerObjectType(
 						type.names.graphql.type,
-						{},
+						{
+							insane: {
+								type,
+							},
+						},
 						() => ({
 							interfaces: () => [
 								build.getInterfaceTypeByName("Node"),
@@ -136,12 +156,6 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 							}),
 							extensions: {
 								directives,
-								insane: {
-									type: {
-										name: type.name,
-										graphql: type.names.graphql.type,
-									},
-								},
 							},
 						}),
 						`${type.names.graphql.type} for Document`,
@@ -183,7 +197,7 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 					[pgPolymorphic, matchers],
 				)
 
-				if (context.Self.name === "Query") {
+				if (context.scope.isRootQuery) {
 					const { GraphQLID, GraphQLNonNull } = build.graphql
 
 					const flds: GraphQLFieldConfigMap<unknown, unknown> = {}
@@ -211,42 +225,54 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 							},
 						}
 
-						flds[singular] = context.fieldWithHooks({ fieldName: singular }, () => ({
-							name: singular,
-							description: `Get a single ${singular}.`,
-							type: build.getOutputTypeByName(typeName),
-							args,
-							plan: EXPORTABLE(
-								(registry, constant, type, track) => () => {
-									const $document = registry.pgResources.document
-										.find({
-											type: constant(type.name),
-										})
-										.single()
-									track($document)
-									return $document
-								},
-								[build.input.pgRegistry, constant, type, track],
-							),
-							extensions: {
-								directives: {
-									oneOf: {},
-								},
+						flds[singular] = context.fieldWithHooks(
+							{
+								fieldName: singular,
 								insane: {
-									type: type.name,
+									isSingleEntrypoint: true,
+									type,
 								},
 							},
-						}))
-
-						const connectionType = build.getObjectTypeByName(`${typeName}Connection`)
+							() => ({
+								name: singular,
+								description: `Get a single ${singular}.`,
+								type: build.getOutputTypeByName(typeName),
+								args,
+								plan: EXPORTABLE(
+									(registry, constant, type, track) => () => {
+										const $document = registry.pgResources.document
+											.find({
+												type: constant(type.name),
+											})
+											.single()
+										track($document)
+										return $document
+									},
+									[build.input.pgRegistry, constant, type, track],
+								),
+								extensions: {
+									directives: {
+										oneOf: {},
+									},
+								},
+							}),
+						)
 
 						flds[plural] = context.fieldWithHooks(
-							{ fieldName: plural },
+							{
+								fieldName: plural,
+								insane: {
+									isMultipleEntrypoint: true,
+									type,
+								},
+							},
 							// @ts-expect-error: listStep is missing?
 							() => ({
 								name: plural,
 								description: `Get ${plural} based on the provided filters.`,
-								type: new GraphQLNonNull(connectionType),
+								type: new GraphQLNonNull(
+									build.getObjectTypeByName(`${typeName}Connection`),
+								),
 								plan: EXPORTABLE(
 									(type, pgRegistry, connection, trackList, trackEach) => () => {
 										const $documents = pgRegistry.pgResources.document.find({ type })
@@ -301,7 +327,6 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 								type: build.getObjectTypeByName("DocumentConnection"),
 								description: "Get a list of documents",
 								args: {
-									// TODO: add filters
 									first: {
 										type: GraphQLInt,
 										applyPlan(_, $documents: DocumentsStep, arg) {
@@ -349,17 +374,9 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 					)
 				}
 
-				// @ts-expect-error
-				const typename = context.Self.extensions.insane?.type?.name
-
-				if (typename) {
+				const type = context.scope.insane?.type
+				if (type) {
 					const flds: GraphileBuild.GrafastFieldConfigMap<DocumentStep> = {}
-					const type = build.input.config.types.find(
-						(type) => type.name === typename,
-					)
-					if (!type) {
-						throw new Error(`no such type ${typename}`)
-					}
 
 					for (const field of type.fields) {
 						const defn = {

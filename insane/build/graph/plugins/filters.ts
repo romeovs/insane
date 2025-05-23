@@ -4,7 +4,7 @@ import { EXPORTABLE } from "graphile-build"
 import { sql } from "pg-sql2"
 
 import { version } from "~/lib/version"
-import type { DocumentsStep } from "./document"
+import type { DocumentsConnectionStep } from "./utils"
 
 export const FiltersPlugin: GraphileConfig.Plugin = {
 	name: "FiltersPlugin",
@@ -32,7 +32,7 @@ export const FiltersPlugin: GraphileConfig.Plugin = {
 								type: GraphQLString,
 								description: "Check if the string is equal to the provided value",
 								apply: EXPORTABLE(
-									(sql) => ($step: PgCondition, arg, other) => {
+									(sql) => ($step: PgCondition, arg) => {
 										$step.where(sql`${$step.alias} = ${sql.value(arg)}`)
 									},
 									[sql],
@@ -98,7 +98,11 @@ export const FiltersPlugin: GraphileConfig.Plugin = {
 				for (const type of build.input.config.types) {
 					build.registerInputObjectType(
 						`${type.names.graphql.type}Filter`,
-						{},
+						{
+							insane: {
+								type,
+							},
+						},
 						() => ({
 							description: `Filter for ${type.names.display.plural}`,
 							fields: () =>
@@ -155,7 +159,7 @@ export const FiltersPlugin: GraphileConfig.Plugin = {
 					if (type.names.graphql.plural === context.scope.fieldName) {
 						extended.where = {
 							type: build.getInputTypeByName(`${type.names.graphql.type}Filter`),
-							applyPlan(_, $connection: DocumentsStep, arg: FieldArg) {
+							applyPlan(_, $connection: DocumentsConnectionStep, arg: FieldArg) {
 								const $select = $connection.getSubplan()
 
 								arg.apply($select)
