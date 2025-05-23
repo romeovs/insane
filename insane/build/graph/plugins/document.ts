@@ -23,7 +23,6 @@ import {
 	type Directives,
 	type DocumentStep,
 	type DocumentsConnectionStep,
-	type DocumentsStep,
 	getter,
 	graphQLType,
 	id,
@@ -229,7 +228,6 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 							{
 								fieldName: singular,
 								insane: {
-									isSingleEntrypoint: true,
 									type,
 								},
 							},
@@ -262,11 +260,10 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 							{
 								fieldName: plural,
 								insane: {
-									isMultipleEntrypoint: true,
 									type,
 								},
 							},
-							// @ts-expect-error: listStep is missing?
+							// @ts-expect-error: listStep is missing on connection?
 							() => ({
 								name: plural,
 								description: `Get ${plural} based on the provided filters.`,
@@ -329,25 +326,25 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 								args: {
 									first: {
 										type: GraphQLInt,
-										applyPlan(_, $documents: DocumentsStep, arg) {
+										applyPlan(_, $documents: DocumentsConnectionStep, arg) {
 											$documents.setFirst(arg.getRaw())
 										},
 									},
 									last: {
 										type: GraphQLInt,
-										applyPlan(_, $documents: DocumentsStep, arg) {
+										applyPlan(_, $documents: DocumentsConnectionStep, arg) {
 											$documents.setLast(arg.getRaw())
 										},
 									},
 									after: {
 										type: GraphQLString,
-										applyPlan(_, $documents: DocumentsStep, arg) {
+										applyPlan(_, $documents: DocumentsConnectionStep, arg) {
 											$documents.setAfter(arg.getRaw())
 										},
 									},
 									before: {
 										type: GraphQLString,
-										applyPlan(_, $documents: DocumentsStep, arg) {
+										applyPlan(_, $documents: DocumentsConnectionStep, arg) {
 											$documents.setBefore(arg.getRaw())
 										},
 									},

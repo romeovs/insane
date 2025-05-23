@@ -63,7 +63,7 @@ export const FiltersPlugin: GraphileConfig.Plugin = {
 								description: "Check if the string is equal to the provided value",
 								apply: EXPORTABLE(
 									(sql) => ($step: PgCondition, arg) => {
-										$step.where(sql`end_with(${$step.alias}, ${sql.value(arg)})`)
+										$step.where(sql`ends_with(${$step.alias}, ${sql.value(arg)})`)
 									},
 									[sql],
 								),
