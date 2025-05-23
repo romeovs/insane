@@ -1,4 +1,4 @@
-import { PgClassFilter, type PgCondition, type PgSelectStep } from "@dataplan/pg"
+import { PgClassFilter, type PgCondition } from "@dataplan/pg"
 import type { FieldArg, GrafastFieldConfigArgumentMap } from "grafast"
 import { EXPORTABLE } from "graphile-build"
 import { sql } from "pg-sql2"
@@ -107,6 +107,7 @@ export const FiltersPlugin: GraphileConfig.Plugin = {
 							description: `Filter for ${type.names.display.plural}`,
 							fields: () =>
 								Object.fromEntries(
+									// @ts-expect-error
 									type.fields
 										.map((field) => {
 											if (field.type === "string") {
@@ -116,22 +117,16 @@ export const FiltersPlugin: GraphileConfig.Plugin = {
 														type: build.getInputTypeByName("StringFilter"),
 														apply: EXPORTABLE(
 															(PgClassFilter, sql, fieldName) =>
-																($step: PgSelectStep, arg) => {
+																($step: PgCondition, arg: FieldArg) => {
 																	if (arg === null) {
 																		return
 																	}
 
-																	if (Array.isArray(arg)) {
-																		//
-																	}
-
-																	const qb = $step.whereBuilder()
-																	const condition = new PgClassFilter(
-																		qb,
-																		sql`${qb.alias}.data->>${sql.literal(fieldName)}`,
+																	// Each filter property is an AND condition
+																	return new PgClassFilter(
+																		$step.andPlan(),
+																		sql`${$step.alias}.data->>${sql.literal(fieldName)}`,
 																	)
-
-																	return condition
 																},
 															[PgClassFilter, sql, field.name],
 														),
@@ -152,17 +147,24 @@ export const FiltersPlugin: GraphileConfig.Plugin = {
 				if (context.Self.name !== "Query") {
 					return args
 				}
+				const { GraphQLList } = build.graphql
 
 				const extended: GrafastFieldConfigArgumentMap = {}
 
 				for (const type of build.input.config.types) {
 					if (type.names.graphql.plural === context.scope.fieldName) {
 						extended.where = {
-							type: build.getInputTypeByName(`${type.names.graphql.type}Filter`),
-							applyPlan(_, $connection: DocumentsConnectionStep, arg: FieldArg) {
+							type: new GraphQLList(
+								build.getInputTypeByName(`${type.names.graphql.type}Filter`),
+							),
+							applyPlan: (
+								_,
+								$connection: DocumentsConnectionStep,
+								arg: FieldArg,
+							) => {
 								const $select = $connection.getSubplan()
-
-								arg.apply($select)
+								// each array element is an OR condition
+								arg.apply($select, ($step) => $step.whereBuilder().orPlan())
 							},
 						}
 					}
