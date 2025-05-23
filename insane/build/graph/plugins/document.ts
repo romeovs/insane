@@ -1,55 +1,32 @@
 import {
-	type PgCodec,
-	type PgSelectParsedCursorStep,
 	type PgSelectQueryBuilderCallback,
-	type PgSelectSingleStep,
-	type PgSelectStep,
 	TYPES,
 	pgPolymorphic,
 } from "@dataplan/pg"
 import {
-	type ConnectionStep,
 	type GrafastFieldConfigArgumentMap,
-	applyTransforms,
 	connection,
 	constant,
-	context as context_,
-	each,
 	lambda,
-	object,
-	sideEffect,
 } from "grafast"
 import { EXPORTABLE } from "graphile-utils"
-import type { GraphQLFieldConfigMap, GraphQLOutputType } from "graphql"
+import type { GraphQLFieldConfigMap } from "graphql"
 import { sql } from "pg-sql2"
 
-import {
-	type InsaneTypeDef,
-	isArrayType,
-	isReferenceType,
-	isUnionType,
-} from "~/lib/schema"
-import { decode, encode } from "~/lib/uid/plan"
+import { isReferenceType } from "~/lib/schema"
+import { decode } from "~/lib/uid/plan"
 import { version } from "~/lib/version"
 
-type DocumentResource =
-	GraphileBuild.Build["input"]["pgRegistry"]["pgResources"]["document"]
-
-export type DocumentStep = PgSelectSingleStep<DocumentResource>
-export type DocumentsStep = ConnectionStep<
-	PgSelectSingleStep<DocumentResource>,
-	PgSelectParsedCursorStep,
-	PgSelectStep<DocumentResource>,
-	PgSelectSingleStep<DocumentResource>
->
-
-declare global {
-	namespace Grafast {
-		interface Context {
-			items: Set<string>
-		}
-	}
-}
+import { track, trackEach, trackList } from "./track"
+import {
+	type Directives,
+	type DocumentStep,
+	type DocumentsConnectionStep,
+	type DocumentsStep,
+	getter,
+	graphQLType,
+	id,
+} from "./utils"
 
 export const DocumentPlugin: GraphileConfig.Plugin = {
 	name: "DocumentPlugin",
@@ -200,8 +177,9 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 				)
 
 				const polymorphism = EXPORTABLE(
-					(pgPolymorphic, matchers) => ($document: DocumentStep) =>
-						pgPolymorphic($document, $document.get("type"), matchers),
+					(pgPolymorphic, matchers) => ($document: DocumentStep) => {
+						return pgPolymorphic($document, $document.get("type"), matchers)
+					},
 					[pgPolymorphic, matchers],
 				)
 
@@ -262,28 +240,30 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 
 						const connectionType = build.getObjectTypeByName(`${typeName}Connection`)
 
-						// TODO: by filters
-
-						flds[plural] = context.fieldWithHooks({ fieldName: plural }, () => ({
-							name: plural,
-							description: `Get ${plural} based on the provided filters.`,
-							type: new GraphQLNonNull(connectionType),
-							plan: EXPORTABLE(
-								(type, pgRegistry, connection, trackList, trackEach) => () => {
-									const $documents = pgRegistry.pgResources.document.find({ type })
-									trackList(type)
-									trackEach($documents)
-									return connection($documents)
-								},
-								[
-									type.name,
-									build.input.pgRegistry,
-									connection,
-									trackList,
-									trackEach,
-								],
-							),
-						}))
+						flds[plural] = context.fieldWithHooks(
+							{ fieldName: plural },
+							// @ts-expect-error: listStep is missing?
+							() => ({
+								name: plural,
+								description: `Get ${plural} based on the provided filters.`,
+								type: new GraphQLNonNull(connectionType),
+								plan: EXPORTABLE(
+									(type, pgRegistry, connection, trackList, trackEach) => () => {
+										const $documents = pgRegistry.pgResources.document.find({ type })
+										trackList(type)
+										trackEach($documents)
+										return connection($documents)
+									},
+									[
+										type.name,
+										build.input.pgRegistry,
+										connection,
+										trackList,
+										trackEach,
+									],
+								),
+							}),
+						)
 					}
 
 					return build.extend(
@@ -409,7 +389,7 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 										trackList,
 										connection,
 									) =>
-										($doc: DocumentStep): DocumentsStep => {
+										($doc: DocumentStep): DocumentsConnectionStep => {
 											const $docs = pgRegistry.pgResources.document.find({
 												type: constant(refType.to),
 											})
@@ -496,143 +476,4 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 			},
 		},
 	},
-}
-
-const id = EXPORTABLE(
-	(encode) =>
-		function ($document: DocumentStep) {
-			return encode($document.get("uid"))
-		},
-	[encode],
-)
-
-const track = EXPORTABLE(
-	(context, sideEffect, id) => ($document: DocumentStep) => {
-		const $items = context().get("items")
-		const $type = $document.get("type")
-		const $id = id($document)
-
-		sideEffect([$items, $type, $id], ([items, type, id]) => {
-			if (type && id) {
-				items?.add(`${type}:${id}`)
-			}
-		})
-	},
-	[context_, sideEffect, id],
-)
-
-const trackEach = EXPORTABLE(
-	(context, sideEffect, applyTransforms, each, object, id) =>
-		($documents: PgSelectStep) => {
-			const $items = context().get("items")
-			const $info = applyTransforms(
-				each($documents, ($document) =>
-					object({
-						type: $document.get("type"),
-						id: id($document),
-					}),
-				),
-			)
-
-			sideEffect([$items, $info], ([items, info]) => {
-				for (const { type, id } of info) {
-					items?.add(`${type}:${id}`)
-				}
-			})
-		},
-	[context_, sideEffect, applyTransforms, each, object, id],
-)
-
-const trackList = EXPORTABLE(
-	(sideEffect, context) => (type: string) => {
-		const $items = context().get("items")
-		sideEffect([$items], ([items]) => {
-			if (items) {
-				items.add(type)
-			}
-		})
-	},
-	[sideEffect, context_],
-)
-
-type Directives = {
-	[name: string]: unknown
-}
-
-function graphQLType(
-	build: GraphileBuild.Build,
-	{ type, required }: { type: InsaneTypeDef; required?: boolean },
-): GraphQLOutputType {
-	const {
-		GraphQLNonNull,
-		GraphQLString,
-		GraphQLInt,
-		GraphQLBoolean,
-		GraphQLFloat,
-		GraphQLList,
-	} = build.graphql
-
-	if (required) {
-		const typ = graphQLType(build, { type, required: false })
-		return new GraphQLNonNull(typ)
-	}
-
-	if (isReferenceType(type)) {
-		if (type.cardinality === "one-to-many" || type.cardinality === "many-to-many") {
-			// TODO use actual type name
-			const refedType = build.input.config.types.find((t) => t.name === type.to)
-			return build.getObjectTypeByName(`${refedType.names.graphql.type}Connection`)
-		}
-		return graphQLType(build, { type: type.to, required })
-	}
-	if (isArrayType(type)) {
-		return new GraphQLList(graphQLType(build, { type: type.of, required }))
-	}
-	if (isUnionType(type)) {
-		throw new Error("Union types are not supported (yet!)")
-	}
-
-	switch (type) {
-		case "string":
-			return GraphQLString
-		case "integer":
-			return GraphQLInt
-		case "float":
-			return GraphQLFloat
-		case "boolean":
-			return GraphQLBoolean
-	}
-
-	const found = build.input.config.types.find((t) => t.name === type)
-	if (found) {
-		return build.getObjectTypeByName(found.names.graphql.type)
-	}
-
-	throw new Error(`Unsupported type ${type}`)
-}
-
-function getter(type: PgCodec, ...path: (string | number)[]) {
-	if (path.length === 0) {
-		throw new Error("path cannot be empty")
-	}
-
-	if (path.length === 1) {
-		const key = path[0]!.toString()
-		return EXPORTABLE(
-			(type, sql, key) => ($document: DocumentStep) => {
-				const alias = $document.getClassStep().alias
-				return $document.select(sql`${alias}.data->${sql.literal(key)}`, type)
-			},
-			[type, sql, key],
-		)
-	}
-
-	const pth = path.map((el) => JSON.stringify(el)).join(",")
-	return EXPORTABLE(
-		(type, sql, pth) => ($document: DocumentStep) => {
-			const alias = $document.getClassStep().alias
-			return $document.select(sql`${alias}.data #> '{${sql.raw(pth)}}'`, type)
-		},
-		[type, sql, pth],
-	)
 }

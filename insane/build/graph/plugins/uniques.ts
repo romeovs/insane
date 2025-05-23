@@ -12,9 +12,7 @@ import { sql } from "pg-sql2"
 
 import type { InsaneTypeDef } from "~/lib/schema"
 import { version } from "~/lib/version"
-
-import type { DocumentStep } from "./document"
-import { field } from "./util"
+import type { DocumentStep } from "./utils"
 
 export const UniquesPlugin: GraphileConfig.Plugin = {
 	name: "UniquesPlugin",
@@ -88,23 +86,26 @@ export const UniquesPlugin: GraphileConfig.Plugin = {
 								extended[name] = {
 									type: fieldType,
 									applyPlan: EXPORTABLE(
-										(fieldName, sql, lambda, field) =>
+										(fieldName, sql, lambda) =>
 											(_: unknown, $document: DocumentStep, arg: FieldArg) => {
 												const $condition = lambda(
 													arg.getRaw(),
 													(value): PgSelectQueryBuilderCallback =>
 														function (qb) {
 															if (value === undefined || value === null) {
+																qb.where(
+																	sql`${qb.alias}.data->>${sql.literal(fieldName)} is null`,
+																)
 																return
 															}
 															qb.where(
-																sql`${field(qb, fieldName)} = ${sql.value(value)}`,
+																sql`${qb.alias}.data->>${sql.literal(fieldName)} = ${sql.value(value)}`,
 															)
 														},
 												)
 												$document.getClassStep().apply($condition)
 											},
-										[fieldName, sql, lambda, field],
+										[fieldName, sql, lambda],
 									),
 								}
 							} else {
@@ -112,7 +113,7 @@ export const UniquesPlugin: GraphileConfig.Plugin = {
 								extended[name] = {
 									type: inputType,
 									applyPlan: EXPORTABLE(
-										(fieldNames, sql, lambda, field) =>
+										(fieldNames, sql, lambda) =>
 											(_: unknown, $document: DocumentStep, arg: FieldArg) => {
 												const $conditions = lambda(
 													arg.getRaw(),
@@ -124,10 +125,12 @@ export const UniquesPlugin: GraphileConfig.Plugin = {
 															for (const fieldName of fieldNames) {
 																const val = value[fieldName]
 																if (val === undefined || val === null) {
-																	qb.where(sql`${field(qb, fieldName)} is null`)
+																	qb.where(
+																		sql`${qb.alias}.data->${sql.literal(fieldName)} is null`,
+																	)
 																} else {
 																	qb.where(
-																		sql`${field(qb, fieldName)} = ${sql.value(val)}`,
+																		sql`${qb.alias}.data->>${sql.literal(fieldName)} = ${sql.value(value)}`,
 																	)
 																}
 															}
@@ -135,7 +138,7 @@ export const UniquesPlugin: GraphileConfig.Plugin = {
 												)
 												$document.getClassStep().apply($conditions)
 											},
-										[unique, sql, lambda, field],
+										[unique, sql, lambda],
 									),
 								}
 								return build.extend(args, extended, `Add uniques for ${type.name}`)
