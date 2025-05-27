@@ -35,6 +35,7 @@ import { LanguagesPlugin } from "./plugins/language"
 import { QueryTypesPlugin } from "./plugins/query-types"
 import { RemoveEmptyDirectivesPlugin } from "./plugins/remove-empty-directives"
 import { ScalarsPlugin } from "./plugins/scalars"
+import { SortArgsPlugin } from "./plugins/sort"
 import { StatusPlugin } from "./plugins/status"
 import { TotalCountPlugin } from "./plugins/total-count"
 import { TypeEnumPlugin } from "./plugins/type"
@@ -83,6 +84,7 @@ export async function build(config: ValidInsaneConfig) {
 					ConnectionArgsPlugin,
 					FieldsPlugin,
 					UniquesPlugin,
+					SortArgsPlugin,
 					FiltersPlugin,
 					TotalCountPlugin,
 					RemoveEmptyDirectivesPlugin,
