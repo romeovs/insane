@@ -1,5 +1,5 @@
 import { PgClassFilter, type PgCondition } from "@dataplan/pg"
-import type { FieldArg, GrafastFieldConfigArgumentMap } from "grafast"
+import type { FieldArg } from "grafast"
 import { EXPORTABLE } from "graphile-build"
 import { sql } from "pg-sql2"
 
@@ -144,16 +144,16 @@ export const FiltersPlugin: GraphileConfig.Plugin = {
 				return _
 			},
 			GraphQLObjectType_fields_field_args(args, build, context) {
-				if (context.Self.name !== "Query") {
+				const type = context.scope.connectionOf
+				if (!type || type === true) {
 					return args
 				}
 				const { GraphQLList } = build.graphql
 
-				const extended: GrafastFieldConfigArgumentMap = {}
-
-				for (const type of build.input.config.types) {
-					if (type.names.graphql.plural === context.scope.fieldName) {
-						extended.where = {
+				return build.extend(
+					args,
+					{
+						where: {
 							type: new GraphQLList(
 								build.getInputTypeByName(`${type.names.graphql.type}Filter`),
 							),
@@ -166,13 +166,8 @@ export const FiltersPlugin: GraphileConfig.Plugin = {
 								// each array element is an OR condition
 								arg.apply($select, ($step) => $step.whereBuilder().orPlan())
 							},
-						}
-					}
-				}
-
-				return build.extend(
-					args,
-					extended,
+						},
+					},
 					`Add filters for ${context.scope.fieldName}`,
 				)
 			},
