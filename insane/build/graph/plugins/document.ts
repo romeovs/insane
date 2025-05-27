@@ -181,10 +181,9 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 								},
 								[type.name],
 							),
-							plan: EXPORTABLE(
-								() => (_: unknown, $document: DocumentStep) => $document,
-								[],
-							),
+							plan(_: unknown, $document: DocumentStep) {
+								return $document
+							},
 						},
 					]),
 				)
@@ -350,15 +349,15 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 									},
 								},
 								plan: EXPORTABLE(
-									(registry, connection, polymorphism, trackList, trackEach) =>
+									(document, connection, polymorphism, trackList, trackEach) =>
 										function () {
-											const $documents = registry.pgResources.document.find()
+											const $documents = document.find()
 											trackList("*")
 											trackEach($documents)
 											return connection($documents, { nodePlan: polymorphism })
 										},
 									[
-										build.input.pgRegistry,
+										build.input.pgRegistry.pgResources.document,
 										connection,
 										polymorphism,
 										trackList,
@@ -395,7 +394,7 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 										fieldName,
 										refType,
 										constant,
-										pgRegistry,
+										document,
 										TYPES,
 										sql,
 										track,
@@ -404,7 +403,7 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 										connection,
 									) =>
 										($doc: DocumentStep): DocumentsConnectionStep => {
-											const $docs = pgRegistry.pgResources.document.find({
+											const $docs = document.find({
 												type: constant(refType.to),
 											})
 
@@ -428,7 +427,7 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 										field.name,
 										field.type,
 										constant,
-										build.input.pgRegistry,
+										build.input.pgRegistry.pgResources.document,
 										TYPES,
 										sql,
 										track,
@@ -440,7 +439,7 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 							} else {
 								// to-one reference
 								defn.plan = EXPORTABLE(
-									(fieldName, refType, constant, pgRegistry, TYPES, sql, track) =>
+									(fieldName, refType, constant, document, TYPES, sql, track) =>
 										($doc: DocumentStep): DocumentStep => {
 											// to-one reference
 											const alias = $doc.getClassStep().alias
@@ -449,7 +448,7 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 												TYPES.bigint,
 											)
 
-											const $ref = pgRegistry.pgResources.document.get({
+											const $ref = document.get({
 												type: constant(refType.to),
 												uid: $id,
 											})
@@ -463,7 +462,7 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 										field.name,
 										field.type,
 										constant,
-										build.input.pgRegistry,
+										build.input.pgRegistry.pgResources.document,
 										TYPES,
 										sql,
 										track,
