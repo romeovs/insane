@@ -26,6 +26,7 @@ import { ConfigPlugin } from "./plugins/config"
 import { ContextPlugin } from "./plugins/context"
 import { DatabasePlugin } from "./plugins/database"
 import { DocumentPlugin } from "./plugins/document"
+import { FieldsPlugin } from "./plugins/fields"
 import { FiltersPlugin } from "./plugins/filters"
 import { HelpersPlugin } from "./plugins/helpers"
 import { InvalidatePlugin } from "./plugins/invalidate"
@@ -78,6 +79,7 @@ export async function build(config: ValidInsaneConfig) {
 					TypeEnumPlugin,
 					DocumentPlugin,
 					QueryTypesPlugin,
+					FieldsPlugin,
 					UniquesPlugin,
 					FiltersPlugin,
 					TotalCountPlugin,

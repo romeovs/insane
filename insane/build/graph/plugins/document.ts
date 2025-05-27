@@ -1,9 +1,8 @@
-import { TYPES, pgPolymorphic } from "@dataplan/pg"
-import { connection, constant, lambda } from "grafast"
+import { pgPolymorphic } from "@dataplan/pg"
+import { connection, lambda } from "grafast"
 import { EXPORTABLE } from "graphile-utils"
-import { sql } from "pg-sql2"
 
-import { type InsaneType, isReferenceType } from "~/lib/schema"
+import type { InsaneType } from "~/lib/schema"
 import { decode } from "~/lib/uid/plan"
 import { version } from "~/lib/version"
 import { track, trackEach, trackList } from "./track"
@@ -12,8 +11,6 @@ import {
 	type Directives,
 	type DocumentStep,
 	type DocumentsConnectionStep,
-	getter,
-	graphQLType,
 	id,
 } from "./utils"
 
@@ -22,13 +19,15 @@ declare global {
 		interface ScopeObject {
 			insane?: {
 				type: InsaneType
-				connectionOf?: InsaneType
 			}
 		}
 		interface ScopeInputObject {
 			insane?: {
 				type: InsaneType
 			}
+		}
+		interface ScopeObjectFieldsField {
+			connectionOf?: InsaneType | true
 		}
 	}
 }
@@ -215,171 +214,62 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 									[decode, build.input.pgRegistry, track],
 								),
 							})),
-							documents: context.fieldWithHooks({ fieldName: "documents" }, () => ({
-								name: "documents",
-								type: build.getObjectTypeByName("DocumentConnection"),
-								description: "Get a list of documents",
-								args: {
-									first: {
-										type: GraphQLInt,
-										applyPlan(_, $documents: DocumentsConnectionStep, arg) {
-											$documents.setFirst(arg.getRaw())
-										},
-									},
-									last: {
-										type: GraphQLInt,
-										applyPlan(_, $documents: DocumentsConnectionStep, arg) {
-											$documents.setLast(arg.getRaw())
-										},
-									},
-									after: {
-										type: GraphQLString,
-										applyPlan(_, $documents: DocumentsConnectionStep, arg) {
-											$documents.setAfter(arg.getRaw())
-										},
-									},
-									before: {
-										type: GraphQLString,
-										applyPlan(_, $documents: DocumentsConnectionStep, arg) {
-											$documents.setBefore(arg.getRaw())
-										},
-									},
+							documents: context.fieldWithHooks(
+								{
+									fieldName: "documents",
+									connectionOf: true,
 								},
-								plan: EXPORTABLE(
-									(document, connection, polymorphism, trackList, trackEach) =>
-										function () {
-											const $documents = document.find()
-											trackList("*")
-											trackEach($documents)
-											return connection($documents, { nodePlan: polymorphism })
+								() => ({
+									name: "documents",
+									type: build.getObjectTypeByName("DocumentConnection"),
+									description: "Get a list of documents",
+									args: {
+										first: {
+											type: GraphQLInt,
+											applyPlan(_, $documents: DocumentsConnectionStep, arg) {
+												$documents.setFirst(arg.getRaw())
+											},
 										},
-									[
-										build.input.pgRegistry.pgResources.document,
-										connection,
-										polymorphism,
-										trackList,
-										trackEach,
-									],
-								),
-							})),
+										last: {
+											type: GraphQLInt,
+											applyPlan(_, $documents: DocumentsConnectionStep, arg) {
+												$documents.setLast(arg.getRaw())
+											},
+										},
+										after: {
+											type: GraphQLString,
+											applyPlan(_, $documents: DocumentsConnectionStep, arg) {
+												$documents.setAfter(arg.getRaw())
+											},
+										},
+										before: {
+											type: GraphQLString,
+											applyPlan(_, $documents: DocumentsConnectionStep, arg) {
+												$documents.setBefore(arg.getRaw())
+											},
+										},
+									},
+									plan: EXPORTABLE(
+										(document, connection, polymorphism, trackList, trackEach) =>
+											function () {
+												const $documents = document.find()
+												trackList("*")
+												trackEach($documents)
+												return connection($documents, { nodePlan: polymorphism })
+											},
+										[
+											build.input.pgRegistry.pgResources.document,
+											connection,
+											polymorphism,
+											trackList,
+											trackEach,
+										],
+									),
+								}),
+							),
 						},
 						"Add document and documents to Query",
 					)
-				}
-
-				const type = context.scope.insane?.type
-				if (type) {
-					const flds: GraphileBuild.GrafastFieldConfigMap<DocumentStep> = {}
-
-					for (const field of type.fields) {
-						const defn = {
-							type: graphQLType(build, field),
-							description: field.description,
-							deprecationReason: field.deprecated,
-							plan: getter(TYPES.jsonb, field.name),
-						}
-						flds[field.name] = defn
-
-						if (isReferenceType(field.type)) {
-							if (
-								field.type.cardinality === "one-to-many" ||
-								field.type.cardinality === "many-to-many"
-							) {
-								// to-many reference
-								defn.plan = EXPORTABLE(
-									(
-										fieldName,
-										refType,
-										constant,
-										document,
-										TYPES,
-										sql,
-										track,
-										trackEach,
-										trackList,
-										connection,
-									) =>
-										($doc: DocumentStep): DocumentsConnectionStep => {
-											const $docs = document.find({
-												type: constant(refType.to),
-											})
-
-											const alias = $doc.getClassStep().alias
-											const path = `$.${fieldName}[*].ref`
-											const $ids = $doc.select(
-												sql`jsonb_path_query_array(${alias}.data, ${sql.literal(path)})`,
-												TYPES.jsonb,
-											)
-											$docs.where(
-												sql`${$docs.alias}.uid IN (SELECT __id::bigint FROM jsonb_array_elements(${$docs.placeholder($ids, TYPES.jsonb, true)}) as __id)`,
-											)
-
-											track($doc)
-											trackEach($docs)
-											trackList(refType.to)
-
-											return connection($docs)
-										},
-									[
-										field.name,
-										field.type,
-										constant,
-										build.input.pgRegistry.pgResources.document,
-										TYPES,
-										sql,
-										track,
-										trackEach,
-										trackList,
-										connection,
-									],
-								)
-							} else {
-								// to-one reference
-								defn.plan = EXPORTABLE(
-									(fieldName, refType, constant, document, TYPES, sql, track) =>
-										($doc: DocumentStep): DocumentStep => {
-											// to-one reference
-											const alias = $doc.getClassStep().alias
-											const $id = $doc.select(
-												sql`(${alias}.data->${sql.literal(fieldName)}->'ref')::bigint`,
-												TYPES.bigint,
-											)
-
-											const $ref = document.get({
-												type: constant(refType.to),
-												uid: $id,
-											})
-
-											track($doc)
-											track($ref)
-
-											return $ref
-										},
-									[
-										field.name,
-										field.type,
-										constant,
-										build.input.pgRegistry.pgResources.document,
-										TYPES,
-										sql,
-										track,
-									],
-								)
-							}
-						} else {
-							// simple getter
-							const get = getter(TYPES.jsonb, field.name)
-							defn.plan = EXPORTABLE(
-								(get, track) => ($doc: DocumentStep) => {
-									track($doc)
-									return get($doc)
-								},
-								[get, track],
-							)
-						}
-					}
-
-					return build.extend(fields, flds, `Add fields to ${context.Self.name}`)
 				}
 
 				return fields

@@ -80,8 +80,8 @@ export const QueryTypesPlugin: GraphileConfig.Plugin = {
 							fieldName: plural,
 							insane: {
 								type,
-								connectionOf: type,
 							},
+							connectionOf: type,
 						},
 						// @ts-expect-error
 						() => ({
