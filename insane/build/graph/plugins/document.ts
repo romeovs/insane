@@ -7,12 +7,7 @@ import { decode } from "~/lib/uid/plan"
 import { version } from "~/lib/version"
 import { track, trackEach, trackList } from "./track"
 
-import {
-	type Directives,
-	type DocumentStep,
-	type DocumentsConnectionStep,
-	id,
-} from "./utils"
+import { type Directives, type DocumentStep, id } from "./utils"
 
 declare global {
 	namespace GraphileBuild {
@@ -158,7 +153,7 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 				return _
 			},
 			GraphQLObjectType_fields(fields, build, context) {
-				const { GraphQLString, GraphQLInt, GraphQLID } = build.graphql
+				const { GraphQLID } = build.graphql
 
 				const matchers = Object.fromEntries(
 					build.input.config.types.map((type) => [
@@ -214,6 +209,7 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 									[decode, build.input.pgRegistry, track],
 								),
 							})),
+
 							documents: context.fieldWithHooks(
 								{
 									fieldName: "documents",
@@ -223,32 +219,6 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 									name: "documents",
 									type: build.getObjectTypeByName("DocumentConnection"),
 									description: "Get a list of documents",
-									args: {
-										first: {
-											type: GraphQLInt,
-											applyPlan(_, $documents: DocumentsConnectionStep, arg) {
-												$documents.setFirst(arg.getRaw())
-											},
-										},
-										last: {
-											type: GraphQLInt,
-											applyPlan(_, $documents: DocumentsConnectionStep, arg) {
-												$documents.setLast(arg.getRaw())
-											},
-										},
-										after: {
-											type: GraphQLString,
-											applyPlan(_, $documents: DocumentsConnectionStep, arg) {
-												$documents.setAfter(arg.getRaw())
-											},
-										},
-										before: {
-											type: GraphQLString,
-											applyPlan(_, $documents: DocumentsConnectionStep, arg) {
-												$documents.setBefore(arg.getRaw())
-											},
-										},
-									},
 									plan: EXPORTABLE(
 										(document, connection, polymorphism, trackList, trackEach) =>
 											function () {

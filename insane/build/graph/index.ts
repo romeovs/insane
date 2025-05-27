@@ -23,6 +23,7 @@ import { exportSchemaAsString } from "graphile-export"
 import type { ValidInsaneConfig } from "~/lib/config"
 import { hash } from "~/lib/hash"
 import { ConfigPlugin } from "./plugins/config"
+import { ConnectionArgsPlugin } from "./plugins/connection"
 import { ContextPlugin } from "./plugins/context"
 import { DatabasePlugin } from "./plugins/database"
 import { DocumentPlugin } from "./plugins/document"
@@ -79,6 +80,7 @@ export async function build(config: ValidInsaneConfig) {
 					TypeEnumPlugin,
 					DocumentPlugin,
 					QueryTypesPlugin,
+					ConnectionArgsPlugin,
 					FieldsPlugin,
 					UniquesPlugin,
 					FiltersPlugin,
