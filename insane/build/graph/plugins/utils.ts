@@ -83,6 +83,9 @@ export function graphQLType(
 	if (isReferenceType(type)) {
 		if (type.cardinality === "one-to-many" || type.cardinality === "many-to-many") {
 			const refedType = build.input.config.types.find((t) => t.name === type.to)
+			if (!refedType) {
+				throw new Error(`Type ${type.to} not found`)
+			}
 			return build.getObjectTypeByName(`${refedType.names.graphql.type}Connection`)
 		}
 		return graphQLType(build, { type: type.to, required })

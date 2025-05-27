@@ -33,6 +33,10 @@ export type InsaneUnionType = {
 	of: NamedType[]
 }
 
+export function isSimpleType(x: InsaneTypeDef): x is InsaneSimpleType {
+	return x === "string" || x === "integer" || x === "float" || x === "boolean"
+}
+
 export function isReferenceType(x: InsaneTypeDef): x is InsaneReferenceType {
 	return typeof x === "object" && x.kind === Kind.reference
 }
