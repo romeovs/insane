@@ -30,6 +30,7 @@ import { FiltersPlugin } from "./plugins/filters"
 import { HelpersPlugin } from "./plugins/helpers"
 import { InvalidatePlugin } from "./plugins/invalidate"
 import { LanguagesPlugin } from "./plugins/language"
+import { QueryTypesPlugin } from "./plugins/query-types"
 import { RemoveEmptyDirectivesPlugin } from "./plugins/remove-empty-directives"
 import { ScalarsPlugin } from "./plugins/scalars"
 import { StatusPlugin } from "./plugins/status"
@@ -76,6 +77,7 @@ export async function build(config: ValidInsaneConfig) {
 					UserPlugin,
 					TypeEnumPlugin,
 					DocumentPlugin,
+					QueryTypesPlugin,
 					UniquesPlugin,
 					FiltersPlugin,
 					TotalCountPlugin,

@@ -1,24 +1,13 @@
-import {
-	type PgSelectQueryBuilderCallback,
-	TYPES,
-	pgPolymorphic,
-} from "@dataplan/pg"
-import {
-	type GrafastFieldConfigArgumentMap,
-	connection,
-	constant,
-	lambda,
-} from "grafast"
+import { TYPES, pgPolymorphic } from "@dataplan/pg"
+import { connection, constant, lambda } from "grafast"
 import { EXPORTABLE } from "graphile-utils"
-import type { GraphQLFieldConfigMap } from "graphql"
 import { sql } from "pg-sql2"
 
-import { isReferenceType } from "~/lib/schema"
+import { type InsaneType, isReferenceType } from "~/lib/schema"
 import { decode } from "~/lib/uid/plan"
 import { version } from "~/lib/version"
-
-import type { InsaneType } from "~/dist/config"
 import { track, trackEach, trackList } from "./track"
+
 import {
 	type Directives,
 	type DocumentStep,
@@ -33,6 +22,7 @@ declare global {
 		interface ScopeObject {
 			insane?: {
 				type: InsaneType
+				connectionOf?: InsaneType
 			}
 		}
 		interface ScopeInputObject {
@@ -169,7 +159,7 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 				return _
 			},
 			GraphQLObjectType_fields(fields, build, context) {
-				const { GraphQLString, GraphQLInt } = build.graphql
+				const { GraphQLString, GraphQLInt, GraphQLID } = build.graphql
 
 				const matchers = Object.fromEntries(
 					build.input.config.types.map((type) => [
@@ -196,102 +186,9 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 				)
 
 				if (context.scope.isRootQuery) {
-					const { GraphQLID, GraphQLNonNull } = build.graphql
-
-					const flds: GraphQLFieldConfigMap<unknown, unknown> = {}
-					for (const type of build.input.config.types) {
-						const { type: typeName, singular, plural } = type.names.graphql
-
-						const args: GrafastFieldConfigArgumentMap = {
-							id: {
-								type: GraphQLID,
-								applyPlan: EXPORTABLE(
-									(decode, lambda, sql) => (_, $document: DocumentStep, arg) => {
-										const $condition = lambda(
-											decode(arg.getRaw()),
-											(value): PgSelectQueryBuilderCallback =>
-												(qb) => {
-													if (value !== undefined) {
-														qb.where(sql`${qb.alias}.uid = ${sql.value(value)}`)
-													}
-												},
-										)
-										$document.getClassStep().apply($condition)
-									},
-									[decode, lambda, sql],
-								),
-							},
-						}
-
-						flds[singular] = context.fieldWithHooks(
-							{
-								fieldName: singular,
-								insane: {
-									type,
-								},
-							},
-							() => ({
-								name: singular,
-								description: `Get a single ${singular}.`,
-								type: build.getOutputTypeByName(typeName),
-								args,
-								plan: EXPORTABLE(
-									(registry, constant, type, track) => () => {
-										const $document = registry.pgResources.document
-											.find({
-												type: constant(type.name),
-											})
-											.single()
-										track($document)
-										return $document
-									},
-									[build.input.pgRegistry, constant, type, track],
-								),
-								extensions: {
-									directives: {
-										oneOf: {},
-									},
-								},
-							}),
-						)
-
-						flds[plural] = context.fieldWithHooks(
-							{
-								fieldName: plural,
-								insane: {
-									type,
-								},
-							},
-							// @ts-expect-error: listStep is missing on connection?
-							() => ({
-								name: plural,
-								description: `Get ${plural} based on the provided filters.`,
-								type: new GraphQLNonNull(
-									build.getObjectTypeByName(`${typeName}Connection`),
-								),
-								plan: EXPORTABLE(
-									(type, pgRegistry, connection, trackList, trackEach) => () => {
-										const $documents = pgRegistry.pgResources.document.find({ type })
-										trackList(type)
-										trackEach($documents)
-										return connection($documents)
-									},
-									[
-										type.name,
-										build.input.pgRegistry,
-										connection,
-										trackList,
-										trackEach,
-									],
-								),
-							}),
-						)
-					}
-
 					return build.extend(
 						fields,
 						{
-							...flds,
 							document: context.fieldWithHooks({ fieldName: "document" }, () => ({
 								name: "document",
 								type: build.getOutputTypeByName("Document"),
