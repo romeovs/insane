@@ -24,7 +24,6 @@ export const InvalidatePlugin = makeExtendSchemaPlugin(
 			},
 			Cache: {
 				async invalidate(_, __, context) {
-					console.log("HERE", context)
 					await context?.invalidate?.()
 					return true
 				},
