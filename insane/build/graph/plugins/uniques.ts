@@ -155,7 +155,7 @@ export const UniquesPlugin: GraphileConfig.Plugin = {
 
 function graphQLInputType(
 	build: GraphileBuild.Build,
-	{ type, required }: { type: string; required?: boolean },
+	{ type, required }: { type: Insane.Schema.Type; required?: boolean },
 ): GraphQLInputType {
 	const { GraphQLString, GraphQLInt, GraphQLBoolean, GraphQLFloat, GraphQLNonNull } =
 		build.graphql
