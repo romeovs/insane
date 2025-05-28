@@ -9,8 +9,9 @@ import type { GraphQLSchema } from "graphql"
 import { collect } from "~/build/docs"
 import type { InsaneInput } from "~/build/input"
 import type { Source, Sources } from "~/build/sources"
-import index from "./template/index.mjs?raw"
-import process from "./template/process.mjs?raw"
+
+import index from "./template/index.ts?raw"
+import process from "./template/process.ts?raw"
 
 const dir = ".insane/generated"
 
@@ -22,10 +23,10 @@ export async function write(input: InsaneInput, output: InsaneOutput) {
 	])
 
 	await Promise.all([
-		writeFile("ts", "index.mjs", index),
-		writeFile("ts", "process.mjs", process),
-		writeFile("ts", "schema.mjs", code),
-		writeFile("ts", "docs.mjs", docs),
+		writeFile("ts", "index.ts", index),
+		writeFile("ts", "process.ts", process),
+		writeFile("ts", "schema.ts", code),
+		writeFile("ts", "docs.ts", docs),
 		writeFile("ts", "queries.ts", sources),
 		writeFile("graphql", "schema.graphql", output.sdl),
 	])
