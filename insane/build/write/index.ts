@@ -1,10 +1,8 @@
 import { promises as fs } from "node:fs"
 import * as path from "node:path"
 
+import { format } from "~/build/format"
 import type { InsaneOutput } from "~/build/graph"
-
-import { format } from "./format"
-export * from "./format"
 
 import index from "./template/index.mjs?raw"
 import process from "./template/process.mjs?raw"
@@ -13,23 +11,20 @@ const dir = ".insane/generated"
 
 export async function write(output: InsaneOutput) {
 	await Promise.all([
-		_write("index.mjs", await format(index, "ts")),
-		_write("process.mjs", await format(process, "ts")),
-		_write("schema.graphql", await format(output.sdl, "graphql")),
-		_write("schema.mjs", await format(clean(output.code), "ts")),
+		writeFile("ts", "index.mjs", index),
+		writeFile("ts", "process.mjs", process),
+		writeFile("ts", "schema.mjs", output.code),
+		writeFile("ts", "docs.mjs", output.docs),
+		writeFile("graphql", "schema.graphql", output.sdl),
 	])
 }
 
-function clean(code: string) {
-	return code
-		.replaceAll(/\$\{sql\.literal\("([^"]+)"\)\}/g, "'$1'")
-		.replaceAll(/__proto__: null,?/g, "")
-}
-
-async function _write(filepath: string, content: string) {
+async function writeFile(type: "ts" | "graphql", filepath: string, content: string) {
 	const fullpath = path.join(dir, filepath)
 	const parent = path.dirname(fullpath)
 
+	const formatted = await format(content, type)
+
 	await fs.mkdir(parent, { recursive: true })
-	await fs.writeFile(fullpath, content)
+	await fs.writeFile(fullpath, formatted)
 }
