@@ -8,7 +8,6 @@ import type { ConnectionStep } from "grafast"
 import { EXPORTABLE } from "graphile-utils"
 import type { GraphQLOutputType } from "graphql"
 import { sql } from "pg-sql2"
-import type { InsaneTypeDef } from "~/config"
 import { isArrayType, isReferenceType, isUnionType } from "~/lib/schema"
 import { encode } from "~/lib/uid/plan"
 
@@ -64,7 +63,7 @@ export function getter(type: PgCodec, ...path: (string | number)[]) {
 
 export function graphQLType(
 	build: GraphileBuild.Build,
-	{ type, required }: { type: InsaneTypeDef; required?: boolean },
+	{ type, required }: { type: Insane.Schema.Type; required?: boolean },
 ): GraphQLOutputType {
 	const {
 		GraphQLNonNull,

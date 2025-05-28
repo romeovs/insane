@@ -1,9 +1,8 @@
-import type { InsaneField } from "./define-field"
 import { camelize, capitalize, classify, humanize, pluralize } from "./util"
 
-type FieldName<Fields extends InsaneField<string>[]> = Fields[number]["name"]
+type FieldName<Fields extends Insane.Schema.Field<string>[]> = Fields[number]["name"]
 
-export type InsaneTypeDefinition<Fields extends InsaneField<string>[]> = {
+export type InsaneTypeDefinition<Fields extends Insane.Schema.Field<string>[]> = {
 	name: string
 	title?: string | undefined
 	deprecated?: string | undefined
@@ -28,7 +27,7 @@ export type InsaneTypeDefinition<Fields extends InsaneField<string>[]> = {
 }
 
 export type InsaneType<
-	Fields extends InsaneField<string>[] = InsaneField<string>[],
+	Fields extends Insane.Schema.Field<string>[] = Insane.Schema.Field<string>[],
 > = {
 	name: string
 	title: string
@@ -54,7 +53,7 @@ export type InsaneType<
 	}
 }
 
-export function defineType<const Fields extends InsaneField<string>[]>(
+export function defineType<const Fields extends Insane.Schema.Field<string>[]>(
 	defn: InsaneTypeDefinition<Fields>,
 ): InsaneType<Fields> {
 	const {

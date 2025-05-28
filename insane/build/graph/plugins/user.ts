@@ -122,6 +122,7 @@ export const UserPlugin: GraphileConfig.Plugin = {
 								[decode, build.input.pgRegistry, sql, lambda],
 							),
 						})),
+						// @ts-expect-error
 						users: context.fieldWithHooks({ fieldName: "users" }, () => ({
 							description: "Get all users.",
 							type: new GraphQLNonNull(
