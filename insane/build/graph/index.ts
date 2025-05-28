@@ -43,6 +43,9 @@ import { TypeEnumPlugin } from "./plugins/type"
 import { UniquesPlugin } from "./plugins/uniques"
 import { UserPlugin } from "./plugins/user"
 
+import { collect } from "~/build/docs"
+import { format } from "~/build/format"
+
 // Hack until graphile-build exports ConnectionPlugin
 const ConnectionPlugin = defaultPreset.plugins!.find(
 	(plugin) => plugin.name === "ConnectionPlugin",
@@ -53,6 +56,7 @@ export type InsaneOutput = {
 	schema: GraphQLSchema
 	code: string
 	sdl: string
+	docs: string
 }
 
 export async function build(config: ValidInsaneConfig): Promise<InsaneOutput> {
@@ -104,18 +108,43 @@ export async function build(config: ValidInsaneConfig): Promise<InsaneOutput> {
 	const input = await gather(cfg)
 	const schema = buildSchema(cfg, input)
 
-	const { code } = await exportSchemaAsString(schema, {
-		mode: "graphql-js",
-	})
-
-	const sdl = printSchemaWithDirectives(schema, {
-		pathToDirectivesInExtensions: ["directives"],
-	})
+	const [sdl, code, docs] = await Promise.all([
+		printSchema(schema),
+		printCode(schema),
+		printDocs(schema),
+	])
 
 	return {
 		hash: await hash(sdl),
 		schema,
 		code,
 		sdl,
+		docs,
 	}
+}
+
+async function printSchema(schema: GraphQLSchema) {
+	const sdl = printSchemaWithDirectives(schema, {
+		pathToDirectivesInExtensions: ["directives"],
+	})
+	return format(sdl, "graphql")
+}
+
+async function printCode(schema: GraphQLSchema) {
+	const { code } = await exportSchemaAsString(schema, {
+		mode: "graphql-js",
+	})
+
+	const clean = code
+		// inline sql literal where possible
+		.replaceAll(/\$\{sql\.literal\("([^"]+)"\)\}/g, "'$1'")
+		// remove useless prototypes
+		.replaceAll(/__proto__: null,?/g, "")
+
+	return format(clean, "ts")
+}
+
+async function printDocs(schema: GraphQLSchema) {
+	const docs = await collect(schema)
+	return `export const docs = ${JSON.stringify(docs)}`
 }
