@@ -18,9 +18,11 @@ declare global {
 	}
 }
 
+import schema = Insane.Schema
+
 export function defineField<const Name extends string>(
-	defn: Insane.Schema.FieldDefinition<Name>,
-): Insane.Schema.Field<Name> {
+	defn: schema.FieldDefinition<Name>,
+): schema.Field<Name> {
 	return {
 		name: defn.name,
 		type: defn.type,

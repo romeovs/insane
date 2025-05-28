@@ -14,26 +14,22 @@ declare global {
 
 		export type SimpleType = StringType | NumberType | IntegerType | BooleanType
 
-		export enum Kind {
-			Reference = "reference",
-			Array = "array",
-			Union = "union",
-		}
+		export type Kind = "reference" | "array" | "union"
 
 		export type ReferenceType = {
-			kind: Kind.Reference
+			kind: "reference"
 			to: CustomTypeName
 			inverse: string
 			cardinality: "one-to-one" | "one-to-many" | "many-to-many" | "many-to-one"
 		}
 
 		export type ArrayType = {
-			kind: Kind.Array
+			kind: "array"
 			of: CustomTypeName | SimpleType
 		}
 
 		export type UnionType = {
-			kind: Kind.Union
+			kind: "union"
 			of: CustomTypeName[]
 		}
 
@@ -43,7 +39,6 @@ declare global {
 }
 
 import schema = Insane.Schema
-export type { schema }
 
 export type InsaneReferenceTypeOptions = {
 	inverse: string
@@ -55,15 +50,15 @@ export function isSimpleType(x: schema.Type): x is schema.SimpleType {
 }
 
 export function isReferenceType(x: schema.Type): x is schema.ReferenceType {
-	return typeof x === "object" && x.kind === schema.Kind.Reference
+	return typeof x === "object" && x.kind === "reference"
 }
 
 export function isArrayType(x: schema.Type): x is schema.ArrayType {
-	return typeof x === "object" && x.kind === schema.Kind.Array
+	return typeof x === "object" && x.kind === "array"
 }
 
 export function isUnionType(x: schema.Type): x is schema.UnionType {
-	return typeof x === "object" && x.kind === schema.Kind.Union
+	return typeof x === "object" && x.kind === "union"
 }
 
 export const t = {
@@ -72,24 +67,24 @@ export const t = {
 	integer: "integer",
 	boolean: "boolean",
 	reference(
-		to: Insane.Schema.CustomTypeName,
+		to: schema.CustomTypeName,
 		options: InsaneReferenceTypeOptions,
-	): Insane.Schema.ReferenceType {
+	): schema.ReferenceType {
 		return {
-			kind: schema.Kind.Reference,
+			kind: "reference",
 			to,
 			...options,
 		}
 	},
 	array(of: schema.CustomTypeName): schema.ArrayType {
 		return {
-			kind: schema.Kind.Array,
+			kind: "array",
 			of,
 		}
 	},
 	union(...arg: schema.CustomTypeName[]): schema.UnionType {
 		return {
-			kind: schema.Kind.Union,
+			kind: "union",
 			of: arg,
 		}
 	},
