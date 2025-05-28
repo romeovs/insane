@@ -27,7 +27,7 @@ export function decode($uid: ExecutableStep) {
 }
 
 decode.$$export = {
-	moduleName: "../../dist/lib.js",
+	moduleName: "../../dist/runtime/index.mjs",
 	exportName: "decode",
 }
 
@@ -40,7 +40,7 @@ export function encode($id: ExecutableStep<string>) {
 }
 
 encode.$$export = {
-	moduleName: "../../dist/lib.js",
+	moduleName: "../../dist/runtime/index.mjs",
 	exportName: "encode",
 }
 
