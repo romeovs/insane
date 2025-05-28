@@ -20,6 +20,7 @@ import { resolvePreset } from "graphile-config"
 
 import { printSchemaWithDirectives } from "@graphql-tools/utils"
 import { exportSchemaAsString } from "graphile-export"
+import type { GraphQLSchema } from "graphql"
 import type { ValidInsaneConfig } from "~/lib/config"
 import { hash } from "~/lib/hash"
 import { ConfigPlugin } from "./plugins/config"
@@ -47,7 +48,14 @@ const ConnectionPlugin = defaultPreset.plugins!.find(
 	(plugin) => plugin.name === "ConnectionPlugin",
 )!
 
-export async function build(config: ValidInsaneConfig) {
+export type InsaneOutput = {
+	hash: string
+	schema: GraphQLSchema
+	code: string
+	sdl: string
+}
+
+export async function build(config: ValidInsaneConfig): Promise<InsaneOutput> {
 	const cfg = resolvePreset({
 		extends: [
 			{
