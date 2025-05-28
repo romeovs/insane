@@ -26,7 +26,7 @@ export type InputOptions = {
 	throttle?: number
 }
 
-export type Input = {
+export type InsaneInput = {
 	hash: string
 	config: ConfigWithHash
 	sources: Sources
@@ -47,7 +47,7 @@ export async function read(options: InputOptions) {
 	}
 }
 
-export function watch(options: InputOptions): Observable<Input | Error> {
+export function watch(options: InputOptions): Observable<InsaneInput | Error> {
 	const { candidates, throttle = 500 } = options
 	return watchConfig({ candidates }).pipe(
 		map((config) => {
@@ -63,7 +63,7 @@ export function watch(options: InputOptions): Observable<Input | Error> {
 		}),
 		switchAll(),
 		throttleTime(throttle, asyncScheduler, { leading: true, trailing: true }),
-		concatMap(async (input): Promise<Input | Error> => {
+		concatMap(async (input): Promise<InsaneInput | Error> => {
 			if (input instanceof Error) {
 				return input
 			}

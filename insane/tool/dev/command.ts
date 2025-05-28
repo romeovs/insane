@@ -22,7 +22,7 @@ export default defineCommand({
 			}
 
 			const output = await build(input.config)
-			await write(output)
+			await write(input, output)
 		})
 	},
 })

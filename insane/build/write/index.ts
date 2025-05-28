@@ -6,16 +6,19 @@ import { format } from "~/build/format"
 import type { InsaneOutput } from "~/build/graph"
 
 import type { GraphQLSchema } from "graphql"
-import { collect } from "../docs"
+import { collect } from "~/build/docs"
+import type { InsaneInput } from "~/build/input"
+import type { Source, Sources } from "~/build/sources"
 import index from "./template/index.mjs?raw"
 import process from "./template/process.mjs?raw"
 
 const dir = ".insane/generated"
 
-export async function write(output: InsaneOutput) {
-	const [code, docs] = await Promise.all([
+export async function write(input: InsaneInput, output: InsaneOutput) {
+	const [code, docs, sources] = await Promise.all([
 		printCode(output.schema),
 		printDocs(output.schema),
+		printSources(input.sources),
 	])
 
 	await Promise.all([
@@ -23,6 +26,7 @@ export async function write(output: InsaneOutput) {
 		writeFile("ts", "process.mjs", process),
 		writeFile("ts", "schema.mjs", code),
 		writeFile("ts", "docs.mjs", docs),
+		writeFile("ts", "queries.ts", sources),
 		writeFile("graphql", "schema.graphql", output.sdl),
 	])
 }
@@ -54,4 +58,28 @@ async function printCode(schema: GraphQLSchema) {
 async function printDocs(schema: GraphQLSchema) {
 	const docs = await collect(schema)
 	return `export const docs = ${JSON.stringify(docs)}`
+}
+
+async function printSources(sources: Sources) {
+	function name(source: Source) {
+		return `query_${source.hash}`
+	}
+
+	const srces = sources.sources.sort((a, b) => a.hash.localeCompare(b.hash))
+
+	return `
+		// THIS IS A GENERATED FILE: DO NOT EDIT
+		// hash: ${sources.hash}
+
+		${srces.map((source) => `const ${name(source)} = ${JSON.stringify(source)} as const`).join("\n")}
+
+		export const sources = {
+			byHash: {
+				${srces.map((source) => `${JSON.stringify(source.hash)}: ${name(source)}\n`).join(",\n")}
+			},
+			bySdl: {
+				${srces.map((source) => `${JSON.stringify(source.sdl)}: ${name(source)}\n`).join(",\n")}
+			},
+		} as const
+	`
 }
