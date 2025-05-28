@@ -61,7 +61,7 @@ export const FieldsPlugin: GraphileConfig.Plugin = {
 								plan: EXPORTABLE(
 									(
 										fieldName,
-										refType,
+										to,
 										constant,
 										document,
 										TYPES,
@@ -73,7 +73,7 @@ export const FieldsPlugin: GraphileConfig.Plugin = {
 									) =>
 										($doc: DocumentStep): DocumentsConnectionStep => {
 											const $docs = document.find({
-												type: constant(refType.to),
+												type: constant(to),
 											})
 
 											const alias = $doc.getClassStep().alias
@@ -88,13 +88,13 @@ export const FieldsPlugin: GraphileConfig.Plugin = {
 
 											track($doc)
 											trackEach($docs)
-											trackList(refType.to)
+											trackList(to)
 
 											return connection($docs)
 										},
 									[
 										field.name,
-										field.type,
+										field.type.to,
 										constant,
 										build.input.pgRegistry.pgResources.document,
 										TYPES,
@@ -119,7 +119,7 @@ export const FieldsPlugin: GraphileConfig.Plugin = {
 							{
 								...base,
 								plan: EXPORTABLE(
-									(fieldName, refType, constant, document, TYPES, sql, track) =>
+									(fieldName, to, constant, document, TYPES, sql, track) =>
 										($doc: DocumentStep): DocumentStep => {
 											// to-one reference
 											const alias = $doc.getClassStep().alias
@@ -129,7 +129,7 @@ export const FieldsPlugin: GraphileConfig.Plugin = {
 											)
 
 											const $ref = document.get({
-												type: constant(refType.to),
+												type: constant(to),
 												uid: $id,
 											})
 
@@ -140,7 +140,7 @@ export const FieldsPlugin: GraphileConfig.Plugin = {
 										},
 									[
 										field.name,
-										field.type,
+										field.type.to,
 										constant,
 										build.input.pgRegistry.pgResources.document,
 										TYPES,

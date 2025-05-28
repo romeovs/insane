@@ -57,15 +57,20 @@ export const QueryTypesPlugin: GraphileConfig.Plugin = {
 								},
 							},
 							plan: EXPORTABLE(
-								(document, constant, type, track) => () => {
+								(document, constant, typeName, track) => () => {
 									const $document = document
-										.find({ type: constant(type.name) })
+										.find({ type: constant(typeName) })
 										.single()
 
 									track($document)
 									return $document
 								},
-								[build.input.pgRegistry.pgResources.document, constant, type, track],
+								[
+									build.input.pgRegistry.pgResources.document,
+									constant,
+									type.name,
+									track,
+								],
 							),
 							extensions: {
 								directives: {
