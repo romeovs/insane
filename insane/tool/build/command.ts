@@ -1,6 +1,8 @@
 import { defineCommand } from "citty"
 
+import { build } from "~/build/graph"
 import { read as readInput } from "~/build/input"
+import { write } from "~/build/write"
 import { configFile, parseConfigFile } from "~/tool/args"
 
 export default defineCommand({
@@ -16,7 +18,7 @@ export default defineCommand({
 			candidates: parseConfigFile(ctx.args),
 		})
 
-		console.log(input.config)
-		console.log(input.sources)
+		const output = await build(input.config)
+		await write(output)
 	},
 })

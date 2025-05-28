@@ -1,6 +1,7 @@
 import { defineCommand } from "citty"
-
+import { build } from "~/build/graph"
 import { watch as watchInput } from "~/build/input"
+import { write } from "~/build/write"
 import { configFile, parseConfigFile } from "~/tool/args"
 
 export default defineCommand({
@@ -14,8 +15,14 @@ export default defineCommand({
 	async run(ctx) {
 		watchInput({
 			candidates: parseConfigFile(ctx.args),
-		}).subscribe((input) => {
-			console.log(input)
+		}).subscribe(async (input) => {
+			if (input instanceof Error) {
+				console.error(input)
+				return
+			}
+
+			const output = await build(input.config)
+			await write(output)
 		})
 	},
 })
