@@ -10,33 +10,50 @@ import { collect } from "~/build/docs"
 import type { InsaneInput } from "~/build/input"
 import type { Source, Sources } from "~/build/sources"
 
+import { hash } from "~/lib/hash"
 import index from "./template/index.ts?raw"
 import process from "./template/process.ts?raw"
 
 const dir = ".insane/generated"
 
 export async function write(input: InsaneInput, output: InsaneOutput) {
-	const [code, docs, sources] = await Promise.all([
-		printCode(output.schema),
-		printDocs(output.schema),
-		printSources(input.sources),
-	])
+	const code = printCode(output.schema)
+	const docs = printDocs(output.schema)
+	const queries = printSources(input.sources)
 
 	await Promise.all([
-		writeFile("ts", "index.ts", index),
-		writeFile("ts", "process.ts", process),
-		writeFile("ts", "schema.ts", code),
-		writeFile("ts", "docs.ts", docs),
-		writeFile("ts", "queries.ts", sources),
-		writeFile("graphql", "schema.graphql", output.sdl),
+		writeFile({ filename: "index.ts", content: index }),
+		writeFile({ filename: "process.ts", content: process }),
+		writeFile({ filename: "schema.graphql", content: output.sdl }),
+		writeFile(code),
+		writeFile(docs),
+		writeFile(queries),
 	])
 }
 
-async function writeFile(type: "ts" | "graphql", filepath: string, content: string) {
-	const fullpath = path.join(dir, filepath)
+type FileDescription = {
+	filename: string
+	content: string[] | string | Promise<string> | Promise<string[]>
+	hash?: string
+}
+
+async function writeFile(defn: FileDescription | Promise<FileDescription>) {
+	const file = await defn
+
+	const type = path.extname(file.filename).substring(1)
+	if (type !== "ts" && type !== "graphql") {
+		throw new Error(`Invalid file type: ${type}`)
+	}
+
+	const fullpath = path.join(dir, file.filename)
 	const parent = path.dirname(fullpath)
 
-	const formatted = await format(content, type)
+	const content = await file.content
+	const src = typeof content === "string" ? content : content.join("\n")
+	const fhash = file.hash ? file.hash : await hash(src)
+
+	const header = printHeader(type, fhash)
+	const formatted = await format(`${header}\n\n${src}`, type)
 
 	await fs.mkdir(parent, { recursive: true })
 	await fs.writeFile(fullpath, formatted)
@@ -47,31 +64,37 @@ async function printCode(schema: GraphQLSchema) {
 		mode: "graphql-js",
 	})
 
-	const clean = code
+	const content = code
 		// inline sql literal where possible
 		.replaceAll(/\$\{sql\.literal\("([^"]+)"\)\}/g, "'$1'")
 		// remove useless prototypes
 		.replaceAll(/__proto__: null,?/g, "")
 
-	return format(clean, "ts")
+	return {
+		filename: "schema.ts",
+		content,
+	}
 }
 
 async function printDocs(schema: GraphQLSchema) {
 	const docs = await collect(schema)
-	return `export const docs = ${JSON.stringify(docs)}`
+	const content = `export const docs = ${JSON.stringify(docs)}`
+
+	return {
+		type: "ts",
+		filename: "docs.ts",
+		content,
+	}
 }
 
-async function printSources(sources: Sources) {
+function printSources(sources: Sources) {
 	function name(source: Source) {
 		return `query_${source.hash}`
 	}
 
 	const srces = sources.sources.sort((a, b) => a.hash.localeCompare(b.hash))
 
-	return `
-		// THIS IS A GENERATED FILE: DO NOT EDIT
-		// hash: ${sources.hash}
-
+	const content = `
 		${srces.map((source) => `const ${name(source)} = ${JSON.stringify(source)} as const`).join("\n")}
 
 		export const sources = {
@@ -83,4 +106,19 @@ async function printSources(sources: Sources) {
 			},
 		} as const
 	`
+	return {
+		filename: "queries.ts",
+		content,
+	}
+}
+
+function printHeader(type: "ts" | "graphql", hash?: string) {
+	const lines = ["THIS IS A GENERATED FILE: DO NOT EDIT"]
+
+	if (hash) {
+		lines.push(`hash: ${hash}`)
+	}
+
+	const comment = type === "ts" ? "// " : "# "
+	return lines.map((line) => `${comment}${line}`).join("\n")
 }
