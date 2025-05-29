@@ -24,6 +24,7 @@ export async function write(output: BuildOutput) {
 		writeFile({ filename: "index.ts", content: index }),
 		writeFile({ filename: "process.ts", content: process }),
 		writeFile({ filename: "schema.graphql", content: output.schema.sdl }),
+		writeFile({ filename: "types.ts", content: output.types }),
 		writeFile(code),
 		writeFile(docs),
 		writeFile(queries),
