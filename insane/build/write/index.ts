@@ -3,28 +3,27 @@ import * as path from "node:path"
 import { exportSchemaAsString } from "graphile-export"
 
 import { format } from "~/build/format"
-import type { InsaneOutput } from "~/build/graph"
 
 import type { GraphQLSchema } from "graphql"
 import { collect } from "~/build/docs"
-import type { InsaneInput } from "~/build/input"
-import type { Source, Sources } from "~/build/sources"
 
+import type { BuildOutput } from "~/build"
 import { hash } from "~/lib/hash"
+import type { OptimisedSource, OptimisedSources } from "../optimise"
 import index from "./template/index.ts?raw"
 import process from "./template/process.ts?raw"
 
 const dir = ".insane/generated"
 
-export async function write(input: InsaneInput, output: InsaneOutput) {
-	const code = printCode(output.schema)
-	const docs = printDocs(output.schema)
-	const queries = printSources(input.sources)
+export async function write(output: BuildOutput) {
+	const code = printCode(output.schema.schema)
+	const docs = printDocs(output.schema.schema)
+	const queries = printSources(output.queries)
 
 	await Promise.all([
 		writeFile({ filename: "index.ts", content: index }),
 		writeFile({ filename: "process.ts", content: process }),
-		writeFile({ filename: "schema.graphql", content: output.sdl }),
+		writeFile({ filename: "schema.graphql", content: output.schema.sdl }),
 		writeFile(code),
 		writeFile(docs),
 		writeFile(queries),
@@ -87,22 +86,30 @@ async function printDocs(schema: GraphQLSchema) {
 	}
 }
 
-function printSources(sources: Sources) {
-	function name(source: Source) {
-		return `query_${source.hash}`
+function printSources(sources: OptimisedSources) {
+	function name(source: OptimisedSource) {
+		return `source_${source.hash}`
 	}
 
 	const srces = sources.sources.sort((a, b) => a.hash.localeCompare(b.hash))
 
 	const content = `
-		${srces.map((source) => `const ${name(source)} = ${JSON.stringify(source)} as const`).join("\n")}
+		${srces
+			.map(
+				(source) =>
+					`const ${name(source)} = ${JSON.stringify({
+						hash: source.hash,
+						document: source.optimised.document,
+					})} as const`,
+			)
+			.join("\n")}
 
 		export const sources = {
 			byHash: {
 				${srces.map((source) => `${JSON.stringify(source.hash)}: ${name(source)}\n`).join(",\n")}
 			},
 			bySdl: {
-				${srces.map((source) => `${JSON.stringify(source.sdl)}: ${name(source)}\n`).join(",\n")}
+				${srces.map((source) => `${JSON.stringify(source.raw.sdl)}: ${name(source)}\n`).join(",\n")}
 			},
 		} as const
 	`

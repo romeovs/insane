@@ -19,6 +19,6 @@ export default defineCommand({
 		})
 
 		const output = await build(input)
-		await write(input, output)
+		await write(output)
 	},
 })

@@ -30,6 +30,7 @@ import { DocumentPlugin } from "./plugins/document"
 import { FieldsPlugin } from "./plugins/fields"
 import { FiltersPlugin } from "./plugins/filters"
 import { HelpersPlugin } from "./plugins/helpers"
+import { OperationInfoPlugin } from "./plugins/info"
 import { InvalidatePlugin } from "./plugins/invalidate"
 import { LanguagesPlugin } from "./plugins/language"
 import { QueryTypesPlugin } from "./plugins/query-types"
@@ -94,6 +95,7 @@ export async function build(config: ValidInsaneConfig): Promise<InsaneOutput> {
 					FiltersPlugin,
 					TotalCountPlugin,
 					RemoveEmptyDirectivesPlugin,
+					OperationInfoPlugin,
 				],
 			},
 		],
