@@ -4,6 +4,7 @@ import { CodeFileLoader } from "@graphql-tools/code-file-loader"
 import { loadDocuments } from "@graphql-tools/load"
 import { concatMap } from "rxjs"
 
+import type { DocumentNode } from "graphql"
 import { watch as watchFiles } from "~/build/files"
 import { distinctUntilChanged } from "~/build/observable"
 import { hash } from "~/lib/hash"
@@ -21,13 +22,11 @@ export type Location = {
 
 export type Source = {
 	hash: string
-	sdl: string
 	location: Location
-}
-
-type FullSource = {
-	rawSDL: string
-	location: string
+	raw: {
+		sdl: string
+		document: DocumentNode
+	}
 }
 
 export type Sources = {
@@ -50,17 +49,25 @@ export async function load(options: LoadSourcesOptions): Promise<Sources> {
 	})
 
 	const hashed = await Promise.all(
-		sources
-			.filter((source): source is FullSource =>
-				Boolean(source.rawSDL && source.location),
-			)
-			.map(async function (source) {
-				return {
-					hash: await hash(source.rawSDL),
-					location: await locate(source.location, source.rawSDL),
+		sources.map(async function (source) {
+			if (!source.location) {
+				throw new Error("Missing source location")
+			}
+			if (!source.rawSDL) {
+				throw new Error("Missing source sdl")
+			}
+			if (!source.document) {
+				throw new Error("Missing source document")
+			}
+			return {
+				hash: await hash(source.rawSDL),
+				location: await locate(source.location, source.rawSDL),
+				raw: {
 					sdl: source.rawSDL,
-				}
-			}),
+					document: source.document,
+				},
+			}
+		}),
 	)
 
 	const hashes = hashed.map((source) => source.hash).sort()
