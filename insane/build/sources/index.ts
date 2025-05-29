@@ -1,3 +1,5 @@
+import { promises as fs } from "node:fs"
+
 import { CodeFileLoader } from "@graphql-tools/code-file-loader"
 import { loadDocuments } from "@graphql-tools/load"
 import { concatMap } from "rxjs"
@@ -11,10 +13,16 @@ export type LoadSourcesOptions = {
 	exclude?: string[]
 }
 
+export type Location = {
+	filename: string
+	line: number
+	column: number
+}
+
 export type Source = {
 	hash: string
 	sdl: string
-	location: string
+	location: Location
 }
 
 type FullSource = {
@@ -49,8 +57,8 @@ export async function load(options: LoadSourcesOptions): Promise<Sources> {
 			.map(async function (source) {
 				return {
 					hash: await hash(source.rawSDL),
+					location: await locate(source.location, source.rawSDL),
 					sdl: source.rawSDL,
-					location: source.location,
 				}
 			}),
 	)
@@ -70,4 +78,23 @@ export function watch(options: LoadSourcesOptions) {
 		concatMap(() => load(options).catch((error: Error) => error)),
 		distinctUntilChanged((a, b) => a.hash === b.hash),
 	)
+}
+
+async function locate(filename: string, sdl: string): Promise<Location> {
+	const code = await fs.readFile(filename, "utf-8")
+	const index = code.indexOf(sdl)
+
+	const before = sdl.substring(0, index)
+	const lines = before.split("\n")
+
+	const line = lines.length
+	const column = lines.at(-1)?.length ?? 0
+
+	const relative = filename.replace(`${process.cwd()}/`, "")
+
+	return {
+		filename: relative,
+		line,
+		column,
+	}
 }
