@@ -1,12 +1,12 @@
 import { pgPolymorphic } from "@dataplan/pg"
-import { connection, lambda } from "grafast"
+import { type FieldArgs, connection, lambda } from "grafast"
 import { EXPORTABLE } from "graphile-utils"
 
 import type { InsaneType } from "~/lib/schema"
 import { decode } from "~/lib/uid/plan"
 import { version } from "~/lib/version"
-import { track, trackEach, trackList } from "./track"
 
+import { track, trackEach, trackList } from "./track"
 import { type Directives, type DocumentStep, id } from "./utils"
 
 declare global {
@@ -216,19 +216,20 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 									},
 								},
 								plan: EXPORTABLE(
-									(decode, registry, track) =>
-										function (_, { $id }) {
+									(decode, registry, track, polymorphism) =>
+										function (_, args: FieldArgs) {
+											const $id = args.$id
 											if (!$id) {
 												throw new Error("No id passed")
 											}
-											const $uid = decode($id!)
+											const $uid = decode($id)
 											const $document = registry.pgResources.document.get({
 												uid: $uid,
 											})
 											track($document)
-											return $document
+											return polymorphism($document)
 										},
-									[decode, build.input.pgRegistry, track],
+									[decode, build.input.pgRegistry, track, polymorphism],
 								),
 							})),
 
