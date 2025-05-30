@@ -66,10 +66,32 @@ export const DocumentPlugin: GraphileConfig.Plugin = {
 								description: "The datetime at which the document was created.",
 								type: new GraphQLNonNull(build.getScalarTypeByName("DateTime")),
 							},
+							createdBy: {
+								description: "The datetime at which the document was created.",
+								type: new GraphQLNonNull(build.getObjectTypeByName("User")),
+								plan: EXPORTABLE(
+									(user) => ($document: DocumentStep) => {
+										const $userid = $document.get("created_by")
+										return user.get({ uid: $userid })
+									},
+									[build.input.pgRegistry.pgResources.user],
+								),
+							},
 							updated: {
 								description:
 									"The datetime at which the document was last updated. If this is the first version, it will be equal to `created`.",
 								type: new GraphQLNonNull(build.getScalarTypeByName("DateTime")),
+							},
+							updatedBy: {
+								description: "The datetime at which the document was created.",
+								type: new GraphQLNonNull(build.getObjectTypeByName("User")),
+								plan: EXPORTABLE(
+									(user) => ($document: DocumentStep) => {
+										const $userid = $document.get("updated_by")
+										return user.get({ uid: $userid })
+									},
+									[build.input.pgRegistry.pgResources.user],
+								),
 							},
 							language: {
 								description: "The language of the document.",
