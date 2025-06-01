@@ -1,7 +1,6 @@
 import { promises as fs } from "node:fs"
 import { gqlPluckFromCodeString as pluck } from "@graphql-tools/graphql-tag-pluck"
 import glob from "fast-glob"
-import { parse } from "graphql"
 
 import { concatMap } from "rxjs"
 
@@ -9,6 +8,8 @@ import type { DocumentNode } from "graphql"
 import { watch as watchFiles } from "~/build/files"
 import { distinctUntilChanged } from "~/build/observable"
 import { hash } from "~/lib/hash"
+
+import { parse } from "./parser"
 
 export type LoadSourcesOptions = {
 	include?: string[]
