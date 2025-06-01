@@ -1,7 +1,8 @@
 import { promises as fs } from "node:fs"
+import { gqlPluckFromCodeString as pluck } from "@graphql-tools/graphql-tag-pluck"
+import glob from "fast-glob"
+import { parse } from "graphql"
 
-import { CodeFileLoader } from "@graphql-tools/code-file-loader"
-import { loadDocuments } from "@graphql-tools/load"
 import { concatMap } from "rxjs"
 
 import type { DocumentNode } from "graphql"
@@ -37,47 +38,42 @@ export type Sources = {
 export async function load(options: LoadSourcesOptions): Promise<Sources> {
 	const { include = ["**/*"], exclude } = options
 
-	const sources = await loadDocuments(include, {
+	const files = await glob(include, {
 		ignore: exclude,
-		loaders: [
-			new CodeFileLoader({
-				pluckConfig: {
-					skipIndent: true,
-				},
-			}),
-		],
 	})
 
-	const hashed = await Promise.all(
-		sources.map(async function (source) {
-			if (!source.location) {
-				throw new Error("Missing source location")
-			}
-			if (!source.rawSDL) {
-				throw new Error("Missing source sdl")
-			}
-			if (!source.document) {
-				throw new Error("Missing source document")
-			}
-			return {
-				hash: await hash(source.rawSDL),
-				location: await locate(source.location, source.rawSDL),
-				raw: {
-					sdl: source.rawSDL,
-					document: source.document,
-				},
-			}
-		}),
-	)
-
-	const hashes = hashed.map((source) => source.hash).sort()
+	const found = await Promise.all(files.map(loadFromFile))
+	const sources = found.flat().sort((a, b) => a.hash.localeCompare(b.hash))
+	const hashes = sources.map((source) => source.hash)
 
 	const result = {
 		hash: await hash(JSON.stringify(hashes)),
-		sources: hashed,
+		sources,
 	}
 
 	return result
+}
+
+async function loadFromFile(filename: string): Promise<Source[]> {
+	const code = await fs.readFile(filename, "utf-8")
+	const plucked = await pluck(filename, code, {
+		skipIndent: true,
+	})
+
+	return Promise.all(
+		plucked.map(async (item) => ({
+			hash: await hash(item.body),
+			location: {
+				filename,
+				line: item.locationOffset.line,
+				column: item.locationOffset.column,
+			},
+			raw: {
+				sdl: item.body,
+				document: parse(item.body),
+			},
+		})),
+	)
 }
 
 export function watch(options: LoadSourcesOptions) {
@@ -85,23 +81,4 @@ export function watch(options: LoadSourcesOptions) {
 		concatMap(() => load(options).catch((error: Error) => error)),
 		distinctUntilChanged((a, b) => a.hash === b.hash),
 	)
-}
-
-async function locate(filename: string, sdl: string): Promise<Location> {
-	const code = await fs.readFile(filename, "utf-8")
-	const index = code.indexOf(sdl)
-
-	const before = sdl.substring(0, index)
-	const lines = before.split("\n")
-
-	const line = lines.length
-	const column = lines.at(-1)?.length ?? 0
-
-	const relative = filename.replace(`${process.cwd()}/`, "")
-
-	return {
-		filename: relative,
-		line,
-		column,
-	}
 }
