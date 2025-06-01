@@ -75,8 +75,8 @@ function buildTypeMap(sources: OptimisedSources): string {
 		if (source.type !== "operation") {
 			continue
 		}
-		const result = `${pascalCase(source.name)}QueryResult`
-		const variables = `${pascalCase(source.name)}QueryVariables`
+		const result = `${pascalCase(source.name)}_QueryResult`
+		const variables = `${pascalCase(source.name)}_QueryVariables`
 		const key = JSON.stringify(source.raw.sdl)
 
 		code += `
@@ -96,8 +96,8 @@ function buildFragmentMap(sources: OptimisedSources): string {
 
 	code += "export type FragmentMap = {\n"
 	for (const fragment of sources.fragments) {
-		const result = `${pascalCase(fragment.name)}Fragment`
-		const variables = `${pascalCase(fragment.name)}FragmentVariables`
+		const result = pascalCase(`${pascalCase(fragment.name)}Fragment`)
+		const variables = pascalCase(`${pascalCase(fragment.name)}FragmentVariables`)
 		code += `  ${JSON.stringify(fragment.name)}: {
 			result: ${result},
 			variables: ${variables},
