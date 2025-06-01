@@ -71,9 +71,7 @@ async function loadFromFile(filename: string): Promise<Source[]> {
 			},
 			raw: {
 				sdl: item.body,
-				document: parse(item.body, {
-					allowLegacyFragmentVariables: true,
-				}),
+				document: parse(item.body),
 			},
 		})),
 	)
