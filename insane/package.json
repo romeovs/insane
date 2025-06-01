@@ -49,6 +49,7 @@
 		"pg-sql2": "5.0.0-beta.8",
 		"rxjs": "^7.8.2",
 		"sqids": "^0.3.0",
+		"ts-graphql-plugin": "^4.0.3",
 		"typescript": "^5.8.3",
 		"xxhash-wasm": "^1.1.0"
 	}
