@@ -1,7 +1,5 @@
 import { type DocumentNode, Kind, visit } from "graphql"
 
-const prefix = "__unnamed_query"
-
 export function addOperationName(document: DocumentNode) {
 	return visit(document, {
 		OperationDefinition: {
@@ -14,7 +12,7 @@ export function addOperationName(document: DocumentNode) {
 					...node,
 					name: {
 						kind: Kind.NAME,
-						value: `${prefix}_${random}`,
+						value: `unnamed_${random}_`,
 					},
 				}
 			},
@@ -79,19 +77,6 @@ export function removeInfo(document: DocumentNode) {
 					(directive) => directive.name.value !== "info",
 				),
 			}
-		},
-	})
-}
-
-export function removeOperationName(document: DocumentNode) {
-	return visit(document, {
-		OperationDefinition: {
-			enter(node) {
-				if (node.name?.value.startsWith(prefix)) {
-					const { name, ...rest } = node
-					return { ...rest }
-				}
-			},
 		},
 	})
 }
