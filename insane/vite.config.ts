@@ -14,6 +14,7 @@ export default defineConfig({
 				build: path.resolve(__dirname, "build"),
 				config: path.resolve(__dirname, "config"),
 				runtime: path.resolve(__dirname, "runtime"),
+				plugin: path.resolve(__dirname, "plugin"),
 			},
 			output: {
 				entryFileNames: "[name]/index.mjs",
