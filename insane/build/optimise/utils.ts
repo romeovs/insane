@@ -1,18 +1,43 @@
 import { type DocumentNode, Kind, visit } from "graphql"
-import { random } from "~/lib/random"
+import { hash } from "~/lib/hash"
 
-export function addOperationName(document: DocumentNode) {
-	return visit(document, {
+export async function addOperationName(document: DocumentNode, prefix: string) {
+	const candidates: Promise<[string, string]>[] = []
+
+	visit(document, {
 		OperationDefinition: {
 			enter(node) {
+				if (!node.loc) {
+					throw new Error("No location")
+				}
 				if (node.name) {
 					return
 				}
+
+				const str = `${prefix}.${node.loc.start}`
+				candidates.push(hash(str).then((h) => [str, h]))
+			},
+		},
+	})
+
+	const byStr = Object.fromEntries(await Promise.all(candidates))
+
+	return visit(document, {
+		OperationDefinition: {
+			enter(node) {
+				if (!node.loc) {
+					throw new Error("No location")
+				}
+				if (node.name) {
+					return
+				}
+
+				const str = `${prefix}.${node.loc.start}`
 				return {
 					...node,
 					name: {
 						kind: Kind.NAME,
-						value: `unnamed_${random()}_`,
+						value: `unnamed_${byStr[str]}_`,
 					},
 				}
 			},

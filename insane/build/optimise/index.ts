@@ -50,8 +50,10 @@ export async function optimise(
 	sources: Sources,
 ): Promise<OptimisedSources> {
 	const docs = split(
-		sources.sources.map((source) =>
-			addOperationName(addInfo(source.raw.document, source.hash)),
+		await Promise.all(
+			sources.sources.map((source) =>
+				addOperationName(addInfo(source.raw.document, source.hash), source.hash),
+			),
 		),
 	)
 
