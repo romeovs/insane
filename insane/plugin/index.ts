@@ -11,7 +11,12 @@ const factory: ts.server.PluginModuleFactory = function (...args) {
 				...info,
 				config: {
 					...info.config,
-					tag: "graphql",
+					tag: {
+						name: "graphql",
+						allowNotTaggedTemplate: false,
+						allowTaggedTemplateExpression: true,
+						allowFunctionCallExpression: true,
+					},
 					schema: ".insane/generated/schema.graphql",
 					enabledGlobalFragments: true,
 				},
