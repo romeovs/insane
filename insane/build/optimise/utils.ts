@@ -1,4 +1,5 @@
 import { type DocumentNode, Kind, visit } from "graphql"
+import { random } from "~/lib/random"
 
 export function addOperationName(document: DocumentNode) {
 	return visit(document, {
@@ -7,12 +8,11 @@ export function addOperationName(document: DocumentNode) {
 				if (node.name) {
 					return
 				}
-				const random = Math.random().toString(36).substring(2).toUpperCase()
 				return {
 					...node,
 					name: {
 						kind: Kind.NAME,
-						value: `unnamed_${random}_`,
+						value: `unnamed_${random()}_`,
 					},
 				}
 			},
