@@ -43,6 +43,8 @@ export default defineCommand({
 
 		signal("SIGTERM", () => process.exit(0))
 
+		console.log("\u001B[?25l")
+
 		watchInput({
 			candidates: parseConfigFile(ctx.args),
 		}).subscribe(async (input) => {
@@ -55,16 +57,20 @@ export default defineCommand({
 				return
 			}
 
-			const output = await build(input)
-			const time = Date.now() - start
+			try {
+				const output = await build(input)
+				const time = Date.now() - start
 
-			await write(output)
-			log.info(
-				`${check} Generated in ${Logger.color.gray(time)}${Logger.color.dim("ms")}`,
-				{
-					id: msg.id,
-				},
-			)
+				await write(output)
+				log.info(
+					`${check} Generated in ${Logger.color.gray(time)}${Logger.color.dim("ms")}`,
+					{
+						id: msg.id,
+					},
+				)
+			} catch (error) {
+				log.error(`✗ ${error.message}`)
+			}
 		})
 	},
 })
