@@ -1,9 +1,11 @@
 import { defineCommand } from "citty"
+
 import { build } from "~/build"
 import { watch as watchInput } from "~/build/input"
 import { write } from "~/build/write"
 import { version } from "~/lib/version"
 import { configFile, parseConfigFile } from "~/tool/args"
+import { listen } from "~/tool/util/listen"
 import { Logger } from "~/tool/util/logger"
 
 const check = Logger.color.green("✓")
@@ -26,7 +28,17 @@ export default defineCommand({
 				sticky: true,
 			},
 		)
+		log.info(
+			`${Logger.color.grey("press ")}${Logger.color.bold("q")}${Logger.color.grey(" to quit")}`,
+			{
+				sticky: true,
+			},
+		)
 		log.newline({ sticky: true })
+
+		listen("q", () => process.exit(0))
+		listen("ctrl+c", () => process.exit(0))
+		listen("ctrl+d", () => process.exit(0))
 
 		watchInput({
 			candidates: parseConfigFile(ctx.args),
@@ -44,9 +56,12 @@ export default defineCommand({
 			const time = Date.now() - start
 
 			await write(output)
-			log.info(`${check} Generated in ${Logger.color.gray(`${time}ms`)}`, {
-				id: msg.id,
-			})
+			log.info(
+				`${check} Generated in ${Logger.color.gray(time)}${Logger.color.dim("ms")}`,
+				{
+					id: msg.id,
+				},
+			)
 		})
 	},
 })
