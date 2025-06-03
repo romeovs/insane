@@ -7,6 +7,7 @@ import { version } from "~/lib/version"
 import { configFile, parseConfigFile } from "~/tool/args"
 import { listen } from "~/tool/util/listen"
 import { Logger } from "~/tool/util/logger"
+import { signal } from "../util/signal"
 
 const check = Logger.color.green("✓")
 const dot = Logger.color.yellow("◦")
@@ -39,6 +40,8 @@ export default defineCommand({
 		listen("q", () => process.exit(0))
 		listen("ctrl+c", () => process.exit(0))
 		listen("ctrl+d", () => process.exit(0))
+
+		signal("SIGTERM", () => process.exit(0))
 
 		watchInput({
 			candidates: parseConfigFile(ctx.args),
