@@ -107,5 +107,6 @@ export class Logger {
 				console.log()
 			}
 		}
+		console.log()
 	}
 }
