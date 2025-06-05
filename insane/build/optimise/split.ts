@@ -23,6 +23,7 @@ export function split(docs: DocumentNode[]): SingleDefinitionDocumentNode[] {
 			.map((definition) => ({
 				kind: Kind.DOCUMENT,
 				definitions: [definition],
+				loc: definition.loc,
 			}))
 	})
 }
