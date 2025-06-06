@@ -2,18 +2,31 @@ import { codegen } from "@graphql-codegen/core"
 import * as typescript from "@graphql-codegen/typescript"
 import * as typescriptOperations from "@graphql-codegen/typescript-operations"
 import { pascalCase } from "change-case-all"
-import { type GraphQLSchema, parse, printSchema } from "graphql"
+import {
+	type FragmentDefinitionNode,
+	type GraphQLSchema,
+	type OperationDefinitionNode,
+	parse,
+	printSchema,
+} from "graphql"
+import {
+	type FragmentDocumentNode,
+	type OperationDocumentNode,
+	type SingleDefinitionDocumentNode,
+	getName,
+	isFragment,
+	isOperation,
+} from "~/lib/document"
 
-import type { OptimisedSources } from "~/build/optimise"
-
-function notNull<T>(x: T | null | undefined): x is T {
-	return Boolean(x)
-}
-
-export async function generate(
-	schema: GraphQLSchema,
-	sources: OptimisedSources,
-): Promise<string> {
+export async function generate({
+	schema,
+	operations,
+	fragments,
+}: {
+	schema: GraphQLSchema
+	operations: SingleDefinitionDocumentNode<OperationDefinitionNode>[]
+	fragments: SingleDefinitionDocumentNode<FragmentDefinitionNode>[]
+}): Promise<string> {
 	const config = {
 		documentMode: "documentNodeImportFragments",
 		optimizeDocumentNode: true,
@@ -34,12 +47,16 @@ export async function generate(
 			DateTime: "Date",
 			Cursor: "string",
 		},
+		namingConvention: {
+			typeNames: "keep",
+			removeUnderscores: false,
+		},
 	}
 
 	let code = await codegen({
 		documents: [
-			...sources.sources.map((source) => source.optimised),
-			...sources.fragments,
+			...operations.map((document) => ({ document, hash: document.meta?.hash })),
+			...fragments.map((document) => ({ document, hash: document.meta?.hash })),
 		],
 		filename: ".insane/generated/types.ts",
 		pluginMap: {
@@ -59,25 +76,27 @@ export async function generate(
 	})
 
 	code += "\n\n"
-	code += buildTypeMap(sources)
+	code += buildTypeMap(operations)
 
 	code += "\n\n"
-	code += buildFragmentMap(sources)
+	code += buildFragmentMap(fragments)
 
 	return code
 }
 
-function buildTypeMap(sources: OptimisedSources): string {
+function buildTypeMap(operations: OperationDocumentNode[]): string {
 	let code = ""
 
 	code += "export type TypeMap = {\n"
-	for (const source of sources.sources) {
-		if (source.type !== "operation") {
+	for (const operation of operations) {
+		if (!isOperation(operation)) {
 			continue
 		}
-		const result = `${pascalCase(source.name)}_QueryResult`
-		const variables = `${pascalCase(source.name)}_QueryVariables`
-		const key = JSON.stringify(source.raw.sdl)
+
+		const name = getName(operation)
+		const result = `${name}QueryResult`
+		const variables = `${name}QueryVariables`
+		const key = JSON.stringify(operation.loc?.source?.body)
 
 		code += `
 			${key}: {
@@ -91,14 +110,19 @@ function buildTypeMap(sources: OptimisedSources): string {
 	return code
 }
 
-function buildFragmentMap(sources: OptimisedSources): string {
+function buildFragmentMap(fragments: FragmentDocumentNode[]): string {
 	let code = ""
 
 	code += "export type FragmentMap = {\n"
-	for (const fragment of sources.fragments) {
-		const result = pascalCase(`${pascalCase(fragment.name)}Fragment`)
-		const variables = pascalCase(`${pascalCase(fragment.name)}FragmentVariables`)
-		code += `  ${JSON.stringify(fragment.name)}: {
+	for (const fragment of fragments) {
+		if (!isFragment(fragment)) {
+			continue
+		}
+
+		const name = getName(fragment)
+		const result = pascalCase(`${pascalCase(name)}Fragment`)
+		const variables = pascalCase(`${pascalCase(name)}FragmentVariables`)
+		code += `  ${JSON.stringify(name)}: {
 			result: ${result},
 			variables: ${variables},
 		},`

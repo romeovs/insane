@@ -8,26 +8,22 @@ import type { GraphQLSchema } from "graphql"
 import { collect } from "~/build/docs"
 
 import type { BuildOutput } from "~/build"
+import { type OperationDocumentNode, getName } from "~/lib/document"
 import { hash } from "~/lib/hash"
-import type { OptimisedSource, OptimisedSources } from "../optimise"
 import index from "./template/index.ts?raw"
 import process from "./template/process.ts?raw"
 
 const dir = ".insane/generated"
 
 export async function write(output: BuildOutput) {
-	const code = printCode(output.schema.schema)
-	const docs = printDocs(output.schema.schema)
-	const queries = printSources(output.queries)
-
 	await Promise.all([
 		writeFile({ filename: "index.ts", content: index }),
 		writeFile({ filename: "process.ts", content: process }),
 		writeFile({ filename: "schema.graphql", content: output.schema.sdl }),
 		writeFile({ filename: "types.ts", content: output.types }),
-		writeFile(code),
-		writeFile(docs),
-		writeFile(queries),
+		writeFile(printCode(output.schema.schema)),
+		writeFile(printDocs(output.schema.schema)),
+		writeFile(printOperations(output.operations)),
 	])
 }
 
@@ -81,36 +77,30 @@ async function printDocs(schema: GraphQLSchema) {
 	const content = `export const docs = ${JSON.stringify(docs)}`
 
 	return {
-		type: "ts",
 		filename: "docs.ts",
 		content,
 	}
 }
 
-function printSources(sources: OptimisedSources) {
-	function name(source: OptimisedSource) {
-		return `source_${source.hash}`
-	}
-
-	const srces = sources.sources.sort((a, b) => a.hash.localeCompare(b.hash))
+function printOperations(operations: OperationDocumentNode[]) {
+	const sorted = Array.from(operations).sort(
+		(a, b) => a.meta?.hash?.localeCompare(b.meta?.hash ?? "") ?? 0,
+	)
 
 	const content = `
-		${srces
+		${sorted
 			.map(
-				(source) =>
-					`const ${name(source)} = ${JSON.stringify({
-						hash: source.hash,
-						document: source.optimised.document,
-					})} as const`,
+				(operation) =>
+					`const ${getName(operation)} = ${JSON.stringify(operation)} as const`,
 			)
 			.join("\n")}
 
 		export const sources = {
 			byHash: {
-				${srces.map((source) => `${JSON.stringify(source.hash)}: ${name(source)}\n`).join(",\n")}
+				${sorted.map((operation) => `${JSON.stringify(operation?.meta?.hash)}: ${getName(operation)}\n`).join(",\n")}
 			},
 			bySdl: {
-				${srces.map((source) => `${JSON.stringify(source.raw.sdl)}: ${name(source)}\n`).join(",\n")}
+				${sorted.map((operation) => `${JSON.stringify(operation.loc?.source.body)}: ${getName(operation)}\n`).join(",\n")}
 			},
 		} as const
 	`
