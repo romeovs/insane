@@ -15,8 +15,10 @@ export type BuildOutput = {
 
 export async function build(input: InsaneInput): Promise<BuildOutput> {
 	const schema = await graph(input.config)
-	const documents = input.sources.sources.map((source) => source.raw.document)
-	const { operations, fragments } = await optimise(schema.schema, documents)
+	const { operations, fragments } = await optimise(
+		schema.schema,
+		input.sources.documents,
+	)
 	const types = await generate({ schema: schema.schema, operations, fragments })
 
 	return {
