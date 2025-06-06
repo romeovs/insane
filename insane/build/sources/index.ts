@@ -70,7 +70,7 @@ async function loadFromFile(filename: string): Promise<Source[]> {
 			},
 			raw: {
 				sdl: item.body,
-				document: parse(item),
+				document: await parse(item),
 			},
 		})),
 	)
