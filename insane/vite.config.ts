@@ -1,7 +1,7 @@
 import path from "node:path"
-import { defineConfig } from "vite"
 import dts from "vite-plugin-dts"
 import tspaths from "vite-tsconfig-paths"
+import { defineConfig } from "vitest/config"
 
 export default defineConfig({
 	plugins: [tspaths(), dts()],
@@ -18,6 +18,13 @@ export default defineConfig({
 			},
 			output: {
 				entryFileNames: "[name]/index.mjs",
+			},
+		},
+	},
+	test: {
+		server: {
+			deps: {
+				fallbackCJS: true,
 			},
 		},
 	},
