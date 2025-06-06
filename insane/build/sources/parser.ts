@@ -5,13 +5,17 @@ import {
 	type InlineFragmentNode,
 	Kind,
 	Location,
+	type Source,
 	type Token,
 	TokenKind,
 } from "graphql"
 import type { Lexer } from "graphql/language/lexer.js"
 import { type ParseOptions, Parser } from "graphql/language/parser.js"
 
-export function parse(source: string, options?: ParseOptions): DocumentNode {
+export function parse(
+	source: string | Source,
+	options?: ParseOptions,
+): DocumentNode {
 	const parser = new FragmentArgumentCompatibleParser(source, options)
 	return parser.parseDocument()
 }
